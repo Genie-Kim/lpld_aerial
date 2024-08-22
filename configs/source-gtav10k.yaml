@@ -24,3 +24,5 @@ SOLVER:
 TEST:
   EVAL_PERIOD: 5000
 OUTPUT_DIR: "checkpoint/gtav10k_source"
+DATALOADER:
+  NUM_WORKERS: 8
