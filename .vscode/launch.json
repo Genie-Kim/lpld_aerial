@@ -1,0 +1,50 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "train_source_dota", // Configuration name displayed in the VS Code dropdown
+            "type": "python", // Specifies that this is a Python debug configuration
+            "request": "launch", // Indicates that this configuration launches a debug session
+            "program": "${workspaceFolder}/tools/train_source.py", // The Python file currently open in VS Code will be executed
+            "console": "integratedTerminal", // Output will be displayed in VS Code's integrated terminal
+            "args": [
+                "--config-file", "configs/source-dota.yaml"  // Example of command line arguments
+            ],
+            "gevent": true, // Enables gevent monkey patching for cooperative multitasking
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "3" // Sets the environment variable to use only one GPU
+            },
+            "justMyCode": false  // Avoid stepping into library code
+        },
+    ]
+}
+
+
+
+
+
+
+
+
+// {
+//     "name": "Python: Multi GPU", // Configuration name displayed in the VS Code dropdown
+//     "type": "python", // Specifies that this is a Python debug configuration
+//     "request": "launch", // Indicates that this configuration launches a debug session
+//     "module": "torch.distributed.launch", // Specifies the Python module to run
+//     "console": "integratedTerminal", // Output will be displayed in VS Code's integrated terminal
+//     "args": [
+//         "--nproc_per_node", "2", // Number of processes per node (typically one per GPU)
+//         "--master_port", "29500", // Port number for the process group to communicate
+//         "--use_env", "true", // Tells the launcher to use environment variables for configuration
+//         "${workspaceFolder}/your_script.py" // Python file to be executed by each process
+//     ],
+//     "gevent": true, // Enables gevent monkey patching for cooperative multitasking
+//     "env": {
+//         "CUDA_VISIBLE_DEVICES": "0,1" // Sets the environment variable to use the first two GPUs
+//     },
+//     "justMyCode": true  // Avoid stepping into library code
+
+// }
