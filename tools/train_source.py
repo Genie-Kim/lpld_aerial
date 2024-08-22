@@ -235,11 +235,22 @@ def do_train(cfg, model, resume=False):
                 and (iteration + 1) % cfg.TEST.EVAL_PERIOD == 0
                 and iteration != max_iter - 1
             ):
-                do_test(cfg, model)
+                results = do_test(cfg, model)
+                class_ap50 = results['bbox'].pop('class-AP50')
+                class_ap50 = {f'class-AP50/{k}': v for k,v in enumerate(class_ap50)}
+                storage.put_scalars(**results['bbox'])
+                storage.put_scalars(**class_ap50)
+                for writer in writers:
+                    writer.write()
                 torch.save(model.state_dict(), os.path.join(cfg.OUTPUT_DIR, "model_{}.pth".format(iteration)))
                 # Compared to "train_net.py", the test results are not dumped to EventStorage
                 comm.synchronize()
-
+                
+            if iteration - start_iter > 5 and (
+                (iteration + 1) % 20 == 0 or iteration == max_iter - 1
+            ):
+                for writer in writers:
+                    writer.write()
             periodic_checkpointer.step(iteration)
 
 

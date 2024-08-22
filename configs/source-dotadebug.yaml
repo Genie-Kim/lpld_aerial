@@ -22,5 +22,5 @@ SOLVER:
   MAX_ITER: 10
   IMS_PER_BATCH: 4
 TEST:
-  EVAL_PERIOD: 1
+  EVAL_PERIOD: 7
 OUTPUT_DIR: "checkpoint/debugdota_source"
