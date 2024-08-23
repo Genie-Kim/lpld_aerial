@@ -18,9 +18,9 @@ DATASETS:
   TEST: ("dota_val",)
 SOLVER:
   BASE_LR: 0.01
-  STEPS: (5,)
-  MAX_ITER: 10
+  STEPS: (10,)
+  MAX_ITER: 21
   IMS_PER_BATCH: 4
 TEST:
-  EVAL_PERIOD: 7
+  EVAL_PERIOD: 20
 OUTPUT_DIR: "checkpoint/debugdota_source"

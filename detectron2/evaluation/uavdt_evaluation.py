@@ -17,8 +17,9 @@ from detectron2.utils.file_io import PathManager
 from .evaluator import DatasetEvaluator
 
 class UAVDTDetectionEvaluator(DatasetEvaluator):
-    def __init__(self, dataset_name):
+    def __init__(self, dataset_name, source_dataset_name=""):
         self._dataset_name = dataset_name
+        self._source_dataset_name = source_dataset_name
         meta = MetadataCatalog.get(dataset_name)
 
         # Too many tiny files, download all to local for speed.
@@ -85,10 +86,7 @@ class UAVDTDetectionEvaluator(DatasetEvaluator):
                         ovthresh=thresh / 100.0,
                         use_07_metric=self._is_2007,
                     )
-                    if cls_name == "rider":
-                        aps[thresh].append(0)
-                    else:
-                        aps[thresh].append(ap * 100)
+                    aps[thresh].append(ap * 100)
 
         ret = OrderedDict()
         mAP = {iou: np.mean(x) for iou, x in aps.items()}

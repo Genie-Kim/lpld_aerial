@@ -85,10 +85,7 @@ class GTAV10KDetectionEvaluator(DatasetEvaluator):
                         ovthresh=thresh / 100.0,
                         use_07_metric=self._is_2007,
                     )
-                    if cls_name == "rider":
-                        aps[thresh].append(0)
-                    else:
-                        aps[thresh].append(ap * 100)
+                    aps[thresh].append(ap * 100)
 
         ret = OrderedDict()
         mAP = {iou: np.mean(x) for iou, x in aps.items()}

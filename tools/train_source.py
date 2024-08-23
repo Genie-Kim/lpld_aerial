@@ -246,7 +246,7 @@ def do_train(cfg, model, resume=False):
                 # Compared to "train_net.py", the test results are not dumped to EventStorage
                 comm.synchronize()
                 
-            if iteration - start_iter > 5 and (
+            elif iteration - start_iter > 5 and (
                 (iteration + 1) % 20 == 0 or iteration == max_iter - 1
             ):
                 for writer in writers:

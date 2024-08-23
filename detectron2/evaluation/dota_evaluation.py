@@ -54,44 +54,6 @@ class DOTADetectionEvaluator(DatasetEvaluator):
                     f"{image_id} {score:.3f} {xmin:.1f} {ymin:.1f} {xmax:.1f} {ymax:.1f}"
                 )
 
-    def evaluate_crop(self, x, y, crop_size=800):
-        all_predictions = comm.gather(self._predictions, dst=0)
-        if not comm.is_main_process():
-            return
-        predictions = defaultdict(list)
-        for predictions_per_rank in all_predictions:
-            for clsid, lines in predictions_per_rank.items():
-                predictions[clsid].extend(lines)
-        del all_predictions
-
-        with tempfile.TemporaryDirectory(prefix="pascal_voc_eval_") as dirname:
-            res_file_template = os.path.join(dirname, "{}.txt")
-            aps = defaultdict(list)  # iou -> ap per class
-            for cls_id, cls_name in enumerate(self._class_names):
-                lines = predictions.get(cls_id, [""])
-                with open(res_file_template.format(cls_name), "w") as f:
-                    f.write("\n".join(lines))
-                for thresh in range(50, 100, 5):
-                    rec, prec, ap = voc_eval_crop(
-                        res_file_template,
-                        self._anno_file_template,
-                        self._image_set_path,
-                        cls_name,
-                        ovthresh=thresh / 100.0,
-                        use_07_metric=self._is_2007,
-                        x=x, y=y, crop_size=crop_size
-                    )
-                    if cls_name == "rider":
-                        aps[thresh].append(0)
-                    else:
-                        aps[thresh].append(ap * 100)
-
-        ret = OrderedDict()
-        mAP = {iou: np.mean(x) for iou, x in aps.items()}
-        ret["bbox"] = {"AP": np.mean(list(mAP.values())), "AP50": mAP[50], "AP75": mAP[75], "class-AP50": aps[50]}
-
-        return ret
-
     def evaluate(self):
         """
         Returns:
@@ -125,10 +87,7 @@ class DOTADetectionEvaluator(DatasetEvaluator):
                         ovthresh=thresh / 100.0,
                         use_07_metric=self._is_2007,
                     )
-                    if cls_name == "rider":
-                        aps[thresh].append(0)
-                    else:
-                        aps[thresh].append(ap * 100)
+                    aps[thresh].append(ap * 100)
 
         ret = OrderedDict()
         mAP = {iou: np.mean(x) for iou, x in aps.items()}
@@ -190,107 +149,6 @@ def voc_ap(rec, prec, use_07_metric=False):
         # and sum (\Delta recall) * prec
         ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
     return ap
-
-def voc_eval_crop(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_metric=False, x=0, y=0, crop_size=800):
-    with PathManager.open(imagesetfile, "r") as f:
-        lines = f.readlines()
-    imagenames = [x.strip() for x in lines]
-
-    # load annots
-    recs = {}
-    for imagename in imagenames:
-        recs[imagename] = parse_rec(annopath.format(imagename))
-
-    # extract gt objects for this class
-    class_recs = {}
-    npos = 0
-    for imagename in imagenames:
-        R = [obj for obj in recs[imagename] if obj["name"] == classname]
-        bbox = np.array([x["bbox"] for x in R])
-        difficult = np.array([x["difficult"] for x in R]).astype(np.bool)
-        # difficult = np.array([False for x in R]).astype(np.bool)  # treat all "difficult" as GT
-        det = [False] * len(R)
-        npos = npos + sum(~difficult)
-        class_recs[imagename] = {"bbox": bbox, "difficult": difficult, "det": det}
-
-    # read dets
-    detfile = detpath.format(classname)
-    with open(detfile, "r") as f:
-        lines = f.readlines()
-
-    splitlines = [x.strip().split(" ") for x in lines]
-    image_ids = [x[0] for x in splitlines]
-    confidence = np.array([float(x[1]) for x in splitlines])
-    BB = np.array([[float(z) for z in x[2:]] for x in splitlines]).reshape(-1, 4)
-
-    # sort by confidence
-    sorted_ind = np.argsort(-confidence)
-    BB = BB[sorted_ind, :]
-    image_ids = [image_ids[x] for x in sorted_ind]
-
-    # go down dets and mark TPs and FPs
-    nd = len(image_ids)
-    tp = np.zeros(nd)
-    fp = np.zeros(nd)
-    for d in range(nd):
-        R = class_recs[image_ids[d]]
-        bb = BB[d, :].astype(float)
-        ovmax = -np.inf
-        BBGT = R["bbox"].astype(float)
-        for i in range(len(BBGT)):
-            BBGT[i][0] = max(BBGT[i][0], x)
-            BBGT[i][1] = max(BBGT[i][1], y)
-            BBGT[i][2] = min(BBGT[i][2], x + crop_size)
-            BBGT[i][3] = min(BBGT[i][3], y + crop_size)
-            
-            # Exclude invalid boxes
-            if BBGT[i][0] >= BBGT[i][2] or BBGT[i][1] >= BBGT[i][3]:
-                R["difficult"][i] = True
-                continue
-                
-        if BBGT.size > 0:
-            # compute overlaps
-            # intersection
-            ixmin = np.maximum(BBGT[:, 0], bb[0])
-            iymin = np.maximum(BBGT[:, 1], bb[1])
-            ixmax = np.minimum(BBGT[:, 2], bb[2])
-            iymax = np.minimum(BBGT[:, 3], bb[3])
-            iw = np.maximum(ixmax - ixmin + 1.0, 0.0)
-            ih = np.maximum(iymax - iymin + 1.0, 0.0)
-            inters = iw * ih
-
-            # union
-            uni = (
-                (bb[2] - bb[0] + 1.0) * (bb[3] - bb[1] + 1.0)
-                + (BBGT[:, 2] - BBGT[:, 0] + 1.0) * (BBGT[:, 3] - BBGT[:, 1] + 1.0)
-                - inters
-            )
-
-            overlaps = inters / uni
-            ovmax = np.max(overlaps)
-            jmax = np.argmax(overlaps)
-
-        if ovmax > ovthresh:
-            if not R["difficult"][jmax]:
-                if not R["det"][jmax]:
-                    tp[d] = 1.0
-                    R["det"][jmax] = 1
-                else:
-                    fp[d] = 1.0
-        else:
-            fp[d] = 1.0
-
-    # compute precision recall
-    fp = np.cumsum(fp)
-    tp = np.cumsum(tp)
-    rec = tp / float(npos)
-    # avoid divide by zero in case the first detection matches a difficult
-    # ground truth
-    prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
-    ap = voc_ap(rec, prec, use_07_metric)
-
-    return rec, prec, ap
-
 
 def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_metric=False):
     with PathManager.open(imagesetfile, "r") as f:
