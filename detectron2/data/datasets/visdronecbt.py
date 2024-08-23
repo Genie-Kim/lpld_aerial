@@ -7,15 +7,12 @@ from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.structures import BoxMode
 from detectron2.utils.file_io import PathManager
 
-__all__ = ["load_dota_instances", "register_dota"]
+__all__ = ["load_visdronecbt_instances", "register_visdronecbt"]
 
-# CLASS_NAMES = ('plane', 'ship', 'storage-tank', 'baseball-diamond', 'tennis-court',
-#                'basketball-court', 'ground-track-field', 'harbor', 'bridge', 'large-vehicle',
-#                'small-vehicle', 'helicopter', 'roundabout', 'soccer-ball-field', 'swimming-pool')
-CLASS_NAMES = ('large-vehicle',
-               'small-vehicle')
+# CLASS_NAMES = ('pedestrian', 'people', 'bicycle', 'car', 'van', 'truck', 'tricycle', 'awning-tricycle', 'bus', 'motor')
+CLASS_NAMES = ('car', 'truck', 'bus')
 
-def load_dota_instances(dirname: str, split: str, class_names: Union[List[str], Tuple[str, ...]]):
+def load_visdronecbt_instances(dirname: str, split: str, class_names: Union[List[str], Tuple[str, ...]]):
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:
         fileids = np.loadtxt(f, dtype=np.str)
 
@@ -25,7 +22,7 @@ def load_dota_instances(dirname: str, split: str, class_names: Union[List[str], 
     dicts = []
     for fileid in fileids:
         anno_file = os.path.join(annotation_dirname, fileid + ".xml")
-        jpeg_file = os.path.join(dirname, "JPEGImages", fileid + ".png")
+        jpeg_file = os.path.join(dirname, "JPEGImages", fileid + ".jpg")
 
         with PathManager.open(anno_file) as f:
             tree = ET.parse(f)
@@ -54,8 +51,8 @@ def load_dota_instances(dirname: str, split: str, class_names: Union[List[str], 
         dicts.append(r)
     return dicts
 
-def register_dota(name, dirname, split, year, class_names=CLASS_NAMES):
-    DatasetCatalog.register(name, lambda: load_dota_instances(dirname, split, class_names))
+def register_visdronecbt(name, dirname, split, year, class_names=CLASS_NAMES):
+    DatasetCatalog.register(name, lambda: load_visdronecbt_instances(dirname, split, class_names))
     MetadataCatalog.get(name).set(
         thing_classes=list(class_names), dirname=dirname, year=year, split=split
     )

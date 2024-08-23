@@ -41,6 +41,7 @@ from .flir import register_flir
 from .bdd100k import register_bdd
 from .dota import register_dota
 from .visdrone import register_visdrone
+from .visdronecbt import register_visdronecbt
 from .uavdt import register_uavdt
 from .gtav10k import register_gtav10k
 
@@ -420,6 +421,16 @@ def register_all_visdrone(root):
         register_visdrone(name, os.path.join(root, dirname), split, year)
         MetadataCatalog.get(name).evaluator_type = "visdrone"
         
+def register_all_visdronecbt(root):
+    SPLITS = [
+        ("visdronecbt_train", "visdrone_voc", "train"),
+        ("visdronecbt_val", "visdrone_voc", "val"),
+    ]
+    for name, dirname, split in SPLITS:
+        year = 2007 if "2007" in name else 2012
+        register_visdronecbt(name, os.path.join(root, dirname), split, year)
+        MetadataCatalog.get(name).evaluator_type = "visdronecbt"
+        
 def register_all_uavdt(root):
     SPLITS = [
         ("uavdt_train_daylight", "uavdt_voc", "train_daylight"),
@@ -474,5 +485,6 @@ if __name__.endswith(".builtin"):
 
     register_all_dota(_root)
     register_all_visdrone(_root)
+    register_all_visdronecbt(_root)
     register_all_uavdt(_root)
     register_all_gtav10k(_root)

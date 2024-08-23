@@ -21,6 +21,7 @@ from .bdd100k_evaluation import BddDetectionEvaluator
 from .flir_evaluation import FLIRDetectionEvaluator
 from .dota_evaluation import DOTADetectionEvaluator
 from .visdrone_evaluation import VisDroneDetectionEvaluator
+from .visdronecbt_evaluation import visdronecbtDetectionEvaluator
 from .uavdt_evaluation import UAVDTDetectionEvaluator
 from .gtav10k_evaluation import GTAV10KDetectionEvaluator
 

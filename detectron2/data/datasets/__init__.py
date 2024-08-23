@@ -17,6 +17,7 @@ from .bdd100k import load_bdd_instances, register_bdd
 from .flir import load_flir_instances, register_flir
 from .dota import load_dota_instances, register_dota
 from .visdrone import load_visdrone_instances, register_visdrone
+from .visdronecbt import load_visdronecbt_instances, register_visdronecbt
 from .uavdt import load_uavdt_instances, register_uavdt
 from .gtav10k import load_gtav10k_instances, register_gtav10k
 

@@ -58,6 +58,7 @@ from detectron2.evaluation import (
     KaistDetectionEvaluator,
     KaistPersonDetectionEvaluator,
     VisDroneDetectionEvaluator,
+    VisDroneCBTDetectionEvaluator,
     DOTADetectionEvaluator,
     UAVDTDetectionEvaluator,
     GTAV10KDetectionEvaluator,
@@ -126,6 +127,8 @@ def get_evaluator(cfg, dataset_name, output_folder=None):
         return KaistPersonDetectionEvaluator(dataset_name)
     if evaluator_type == "visdrone":
         return VisDroneDetectionEvaluator(dataset_name)
+    if evaluator_type == "visdronecbt":
+        return VisDroneCBTDetectionEvaluator(dataset_name)
     if evaluator_type == "dota":
         return DOTADetectionEvaluator(dataset_name)
     if evaluator_type == "uavdt":
