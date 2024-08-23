@@ -17,7 +17,7 @@ from detectron2.utils.file_io import PathManager
 
 from .evaluator import DatasetEvaluator
 
-class VisDroneDetectionEvaluator(DatasetEvaluator):
+class VisDroneCBTDetectionEvaluator(DatasetEvaluator):
     def __init__(self, dataset_name):
         self._dataset_name = dataset_name
         meta = MetadataCatalog.get(dataset_name)

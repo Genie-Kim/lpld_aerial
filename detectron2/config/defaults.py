@@ -645,4 +645,3 @@ _C.VIS_PERIOD = 0
 _C.GLOBAL = CN()
 _C.GLOBAL.HACK = 1.0
 
-_C.CLSMAP = "None"
