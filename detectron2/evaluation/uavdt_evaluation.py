@@ -16,6 +16,8 @@ from detectron2.utils.file_io import PathManager
 
 from .evaluator import DatasetEvaluator
 
+import pdb
+
 class UAVDTDetectionEvaluator(DatasetEvaluator):
     def __init__(self, dataset_name, source_dataset_name=""):
         self._dataset_name = dataset_name
@@ -49,9 +51,22 @@ class UAVDTDetectionEvaluator(DatasetEvaluator):
                 # The inverse of data loading logic in `datasets/pascal_voc.py`
                 xmin += 1
                 ymin += 1
-                self._predictions[cls].append(
-                    f"{image_id} {score:.3f} {xmin:.1f} {ymin:.1f} {xmax:.1f} {ymax:.1f}"
-                )
+                if self._source_dataset_name == "dota":
+                    if cls == 9:#Large vehicle
+                        self._predictions[1].append(
+                            f"{image_id} {score:.3f} {xmin:.1f} {ymin:.1f} {xmax:.1f} {ymax:.1f}"
+                        )
+                        self._predictions[2].append(
+                            f"{image_id} {score:.3f} {xmin:.1f} {ymin:.1f} {xmax:.1f} {ymax:.1f}"
+                        )
+                    elif cls == 10: # Small vehicle
+                        self._predictions[0].append(
+                            f"{image_id} {score:.3f} {xmin:.1f} {ymin:.1f} {xmax:.1f} {ymax:.1f}"
+                        )
+                else:
+                    self._predictions[cls].append(
+                        f"{image_id} {score:.3f} {xmin:.1f} {ymin:.1f} {xmax:.1f} {ymax:.1f}"
+                    )
 
     def evaluate(self):
         """

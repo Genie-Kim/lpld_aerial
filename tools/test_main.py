@@ -119,7 +119,7 @@ def get_evaluator(cfg, dataset_name, output_folder=None):
     if evaluator_type == "dota":
         return DOTADetectionEvaluator(dataset_name)
     if evaluator_type == "uavdt":
-        return UAVDTDetectionEvaluator(dataset_name)
+        return UAVDTDetectionEvaluator(dataset_name, cfg.CROSSDOMAIN.SOURCE)
     if evaluator_type == "gtav10k":
         return GTAV10KDetectionEvaluator(dataset_name)
     
