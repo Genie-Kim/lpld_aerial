@@ -20,6 +20,7 @@ from .kaist_person_evaluation import KaistPersonDetectionEvaluator
 from .bdd100k_evaluation import BddDetectionEvaluator
 from .flir_evaluation import FLIRDetectionEvaluator
 from .dota_evaluation import DOTADetectionEvaluator
+from .dotagta_evaluation import DOTAgtaDetectionEvaluator
 from .visdrone_evaluation import VisDroneDetectionEvaluator
 from .visdronedota_evaluation import VisDroneDotaCBTDetectionEvaluator
 from .uavdt_evaluation import UAVDTDetectionEvaluator
