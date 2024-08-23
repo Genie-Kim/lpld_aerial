@@ -53,8 +53,9 @@ from detectron2.evaluation import (
     WatercolorDetectionEvaluator,
     DOTADetectionEvaluator,
     VisDroneDetectionEvaluator,
-    VisDroneCBTDetectionEvaluator,
+    VisDroneDotaCBTDetectionEvaluator,
     UAVDTDetectionEvaluator,
+    UAVDTDotaDetectionEvaluator,
     GTAV10KDetectionEvaluator,
 )
 from detectron2.modeling import build_model
@@ -117,12 +118,14 @@ def get_evaluator(cfg, dataset_name, output_folder=None):
         return WatercolorDetectionEvaluator(dataset_name)
     if evaluator_type == "visdrone":
         return VisDroneDetectionEvaluator(dataset_name)
-    if evaluator_type == "visdronecbt":
-        return VisDroneCBTDetectionEvaluator(dataset_name)
+    if evaluator_type == "visdronedota":
+        return VisDroneDotaCBTDetectionEvaluator(dataset_name)
     if evaluator_type == "dota":
         return DOTADetectionEvaluator(dataset_name)
     if evaluator_type == "uavdt":
         return UAVDTDetectionEvaluator(dataset_name)
+    if evaluator_type == "uavdtdota":
+        return UAVDTDotaDetectionEvaluator(dataset_name)
     if evaluator_type == "gtav10k":
         return GTAV10KDetectionEvaluator(dataset_name)
     

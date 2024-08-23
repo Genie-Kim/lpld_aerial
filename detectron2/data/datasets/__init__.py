@@ -17,8 +17,9 @@ from .bdd100k import load_bdd_instances, register_bdd
 from .flir import load_flir_instances, register_flir
 from .dota import load_dota_instances, register_dota
 from .visdrone import load_visdrone_instances, register_visdrone
-from .visdronecbt import load_visdronecbt_instances, register_visdronecbt
+from .visdronedota import load_visdronedota_instances, register_visdronedota
 from .uavdt import load_uavdt_instances, register_uavdt
+from .uavdtdota import load_uavdtdota_instances, register_uavdtdota
 from .gtav10k import load_gtav10k_instances, register_gtav10k
 
 __all__ = [k for k in globals().keys() if not k.startswith("_")]

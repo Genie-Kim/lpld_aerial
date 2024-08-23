@@ -41,8 +41,9 @@ from .flir import register_flir
 from .bdd100k import register_bdd
 from .dota import register_dota
 from .visdrone import register_visdrone
-from .visdronecbt import register_visdronecbt
+from .visdronedota import register_visdronedota
 from .uavdt import register_uavdt
+from .uavdtdota import register_uavdtdota
 from .gtav10k import register_gtav10k
 
 # ==== Predefined datasets and splits for COCO ==========
@@ -421,15 +422,15 @@ def register_all_visdrone(root):
         register_visdrone(name, os.path.join(root, dirname), split, year)
         MetadataCatalog.get(name).evaluator_type = "visdrone"
         
-def register_all_visdronecbt(root):
+def register_all_visdronedota(root):
     SPLITS = [
-        ("visdronecbt_train", "visdrone_voc", "train"),
-        ("visdronecbt_val", "visdrone_voc", "val"),
+        ("visdronedota_train", "visdrone_voc", "train"),
+        ("visdronedota_val", "visdrone_voc", "val"),
     ]
     for name, dirname, split in SPLITS:
         year = 2007 if "2007" in name else 2012
-        register_visdronecbt(name, os.path.join(root, dirname), split, year)
-        MetadataCatalog.get(name).evaluator_type = "visdronecbt"
+        register_visdronedota(name, os.path.join(root, dirname), split, year)
+        MetadataCatalog.get(name).evaluator_type = "visdronedota"
         
 def register_all_uavdt(root):
     SPLITS = [
@@ -444,6 +445,16 @@ def register_all_uavdt(root):
         year = 2007 if "2007" in name else 2012
         register_uavdt(name, os.path.join(root, dirname), split, year)
         MetadataCatalog.get(name).evaluator_type = "uavdt"
+
+def register_all_uavdtdota(root):
+    SPLITS = [
+        ("uavdtdota_train", "uavdt_voc", "train_daylight"),
+        ("uavdtdota_val", "uavdt_voc", "val_daylight"),
+    ]
+    for name, dirname, split in SPLITS:
+        year = 2007 if "2007" in name else 2012
+        register_uavdtdota(name, os.path.join(root, dirname), split, year)
+        MetadataCatalog.get(name).evaluator_type = "uavdtdota"
 
 def register_all_gtav10k(root):
     SPLITS = [
@@ -485,6 +496,7 @@ if __name__.endswith(".builtin"):
 
     register_all_dota(_root)
     register_all_visdrone(_root)
-    register_all_visdronecbt(_root)
+    register_all_visdronedota(_root)
     register_all_uavdt(_root)
+    register_all_uavdtdota(_root)
     register_all_gtav10k(_root)

@@ -14,8 +14,8 @@ INPUT:
   MIN_SIZE_TEST: 1200
   MAX_SIZE_TEST: 1999
 DATASETS:
-  TRAIN: ("visdronecbt_train",)
-  TEST: ("visdronecbt_val",)
+  TRAIN: ("visdronedota_train",)
+  TEST: ("visdronedota_val",)
 SOLVER:
   BASE_LR: 0.01
   STEPS: (50000,)
@@ -23,6 +23,6 @@ SOLVER:
   IMS_PER_BATCH: 8
 TEST:
   EVAL_PERIOD: 5000
-OUTPUT_DIR: "checkpoint/visdronecbt_source"
+OUTPUT_DIR: "checkpoint/visdronedota_source"
 DATALOADER:
   NUM_WORKERS: 16

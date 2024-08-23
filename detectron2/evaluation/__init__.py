@@ -21,8 +21,9 @@ from .bdd100k_evaluation import BddDetectionEvaluator
 from .flir_evaluation import FLIRDetectionEvaluator
 from .dota_evaluation import DOTADetectionEvaluator
 from .visdrone_evaluation import VisDroneDetectionEvaluator
-from .visdronecbt_evaluation import VisDroneCBTDetectionEvaluator
+from .visdronedota_evaluation import VisDroneDotaCBTDetectionEvaluator
 from .uavdt_evaluation import UAVDTDetectionEvaluator
+from .uavdtdota_evaluation import UAVDTDotaDetectionEvaluator
 from .gtav10k_evaluation import GTAV10KDetectionEvaluator
 
 __all__ = [k for k in globals().keys() if not k.startswith("_")]
