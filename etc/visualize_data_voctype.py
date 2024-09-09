@@ -40,6 +40,12 @@ def visualize_annotations(image_path, xml_file):
     plt.show()
 
 # Example usage
-image_path = '/hddsda/lpld_dataset/GTAV10K/JPEGImages/1617793691.jpg'
-xml_file = '/hddsda/lpld_dataset/GTAV10K/Annotations/1617793691.xml'
+import os
+dataset='uavdt_voc'
+ext = 'jpg'
+image_id = 'M0605_img000765'
+
+datasetpath = os.path.join('dataset', dataset)
+image_path = os.path.join(datasetpath, 'JPEGImages', f'{image_id}.{ext}')
+xml_file = os.path.join(datasetpath, 'Annotations', f'{image_id}.xml')
 visualize_annotations(image_path, xml_file)

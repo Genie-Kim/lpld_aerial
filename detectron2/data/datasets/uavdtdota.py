@@ -10,10 +10,9 @@ from detectron2.utils.file_io import PathManager
 __all__ = ["load_uavdtdota_instances", "register_uavdtdota"]
 
 # CLASS_NAMES = ('car', 'truck', 'bus')
-CLASS_NAMES = ('large-vehicle',
-               'small-vehicle')
-mapper = {'bus': 'large-vehicle', "truck": 'large-vehicle', 'car': 'small-vehicle'}
-
+# CLASS_NAMES = ('large-vehicle', 'small-vehicle')
+CLASS_NAMES = ('small-vehicle','large-vehicle')
+mapper = {'bus': 'large-vehicle', 'truck': 'large-vehicle', 'car': 'small-vehicle'}
 
 def load_uavdtdota_instances(dirname: str, split: str, class_names: Union[List[str], Tuple[str, ...]]):
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:

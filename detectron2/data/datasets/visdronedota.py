@@ -10,8 +10,7 @@ from detectron2.utils.file_io import PathManager
 __all__ = ["load_visdronedota_instances", "register_visdronedota"]
 
 # CLASS_NAMES = ('pedestrian', 'people', 'bicycle', 'car', 'van', 'truck', 'tricycle', 'awning-tricycle', 'bus', 'motor')
-CLASS_NAMES = ('large-vehicle',
-               'small-vehicle')
+CLASS_NAMES = ('small-vehicle','large-vehicle')
 mapper = {'bus': 'large-vehicle', "truck": 'large-vehicle', 'car': 'small-vehicle'}
 
 def load_visdronedota_instances(dirname: str, split: str, class_names: Union[List[str], Tuple[str, ...]]):

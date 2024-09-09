@@ -12,8 +12,7 @@ __all__ = ["load_dota_instances", "register_dota"]
 # CLASS_NAMES = ('plane', 'ship', 'storage-tank', 'baseball-diamond', 'tennis-court',
 #                'basketball-court', 'ground-track-field', 'harbor', 'bridge', 'large-vehicle',
 #                'small-vehicle', 'helicopter', 'roundabout', 'soccer-ball-field', 'swimming-pool')
-CLASS_NAMES = ('large-vehicle',
-               'small-vehicle')
+CLASS_NAMES =('small-vehicle','large-vehicle')
 
 def load_dota_instances(dirname: str, split: str, class_names: Union[List[str], Tuple[str, ...]]):
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:

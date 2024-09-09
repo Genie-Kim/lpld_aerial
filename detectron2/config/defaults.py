@@ -588,6 +588,8 @@ _C.SOLVER.CLIP_GRADIENTS.NORM_TYPE = 2.0
 # To use AMP in inference, run inference under autocast()
 _C.SOLVER.AMP = CN({"ENABLED": False})
 
+_C.SOLVER.PATIENCE = 5
+
 # ---------------------------------------------------------------------------- #
 # Specific test options
 # ---------------------------------------------------------------------------- #

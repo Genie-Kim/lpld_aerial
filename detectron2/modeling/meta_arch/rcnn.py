@@ -152,7 +152,24 @@ class GeneralizedRCNN(nn.Module):
             gt_instances = None
 
         features = self.backbone(images.tensor)
+        # at line 155
+        # view the ground truth bounding boxes and images
+        # import cv2
+        # import os
+        # sample = images.tensor[0].permute(1, 2, 0).cpu().numpy()
+        # sample = np.ascontiguousarray(sample, dtype=np.uint8)
+        # gt_boxes = gt_instances[0].gt_boxes.tensor.cpu().numpy()
 
+        # for bbox in range(len(gt_boxes)):
+        #     gt_resized_minx = int(gt_boxes[bbox][0])
+        #     gt_resized_miny = int(gt_boxes[bbox][1])
+        #     gt_resized_maxx = int(gt_boxes[bbox][2])
+        #     gt_resized_maxy = int(gt_boxes[bbox][3])
+        #     gt_boxes[bbox] = [gt_resized_minx, gt_resized_miny, gt_resized_maxx, gt_resized_maxy]
+        #     cv2.rectangle(sample, (int(gt_boxes[bbox][0]), int(gt_boxes[bbox][1])),
+        #                     (int(gt_boxes[bbox][2]), int(gt_boxes[bbox][3])), (0, 255, 0), 2)
+
+        # sample
         if self.proposal_generator is not None:
             proposals, proposal_losses = self.proposal_generator(images, features, gt_instances)
         else:

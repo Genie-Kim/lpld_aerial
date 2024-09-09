@@ -70,26 +70,39 @@ class GTAV10KDetectionEvaluator(DatasetEvaluator):
             res_file_template = os.path.join(dirname, "{}.txt")
 
             aps = defaultdict(list)  # iou -> ap per class
+            recs = defaultdict(list)
             for cls_id, cls_name in enumerate(self._class_names):
                 lines = predictions.get(cls_id, [""])
 
                 with open(res_file_template.format(cls_name), "w") as f:
                     f.write("\n".join(lines))
 
-                for thresh in range(50, 100, 5):
-                    rec, prec, ap = voc_eval(
-                        res_file_template,
-                        self._anno_file_template,
-                        self._image_set_path,
-                        cls_name,
-                        ovthresh=thresh / 100.0,
-                        use_07_metric=self._is_2007,
-                    )
-                    aps[thresh].append(ap * 100)
+                thresh=50
+                rec, prec, ap = voc_eval(
+                    res_file_template,
+                    self._anno_file_template,
+                    self._image_set_path,
+                    cls_name,
+                    ovthresh=thresh / 100.0,
+                    use_07_metric=self._is_2007,
+                )
+                aps[thresh].append(ap * 100)
+                if "rec_small" in rec:
+                    recs["small"].append(rec["rec_small"])
+                if "rec_medium" in rec:
+                    recs["medium"].append(rec["rec_medium"])
+                if "rec_large" in rec:
+                    recs["large"].append(rec["rec_large"])
 
         ret = OrderedDict()
         mAP = {iou: np.mean(x) for iou, x in aps.items()}
-        ret["bbox"] = {"AP": np.mean(list(mAP.values())), "AP50": mAP[50], "AP75": mAP[75], "class-AP50": aps[50]}
+        mReC = {diff: np.mean(x) for diff, x in recs.items()}
+
+        ret["bbox"] = {"AP": np.mean(list(mAP.values())),
+                       "AP50": mAP[50], "class-AP50": aps[50],
+                       "FNR_small" : 100-100*mReC["small"],
+                       "FNR_medium" : 100-100*mReC["medium"],
+                       "FNR_large" : 100-100*mReC["large"]}
 
         return ret
 
@@ -148,7 +161,6 @@ def voc_ap(rec, prec, use_07_metric=False):
         ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
     return ap
 
-
 def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_metric=False):
     with PathManager.open(imagesetfile, "r") as f:
         lines = f.readlines()
@@ -159,16 +171,35 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     for imagename in imagenames:
         recs[imagename] = parse_rec(annopath.format(imagename))
 
+    # thresholds for categorizing object sizes (in terms of area)
+    small_thresh = 32 * 32
+    medium_thresh = 96 * 96
+
     # extract gt objects for this class
     class_recs = {}
-    npos = 0
+    npos = 0  # Total number of positive samples (not difficult)
+    npos_small = 0
+    npos_medium = 0
+    npos_large = 0
+
     for imagename in imagenames:
         R = [obj for obj in recs[imagename] if obj["name"] == classname]
         bbox = np.array([x["bbox"] for x in R])
         difficult = np.array([x["difficult"] for x in R]).astype(np.bool)
-        # difficult = np.array([False for x in R]).astype(np.bool)  # treat all "difficult" as GT
         det = [False] * len(R)
-        npos = npos + sum(~difficult)
+        
+        npos += sum(~difficult)
+        
+        for i, box in enumerate(bbox):
+            area = (box[2] - box[0]) * (box[3] - box[1])
+            if not difficult[i]:
+                if area < small_thresh:
+                    npos_small += 1
+                elif area < medium_thresh:
+                    npos_medium += 1
+                else:
+                    npos_large += 1
+
         class_recs[imagename] = {"bbox": bbox, "difficult": difficult, "det": det}
 
     # read dets
@@ -190,6 +221,13 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     nd = len(image_ids)
     tp = np.zeros(nd)
     fp = np.zeros(nd)
+    tp_small = np.zeros(nd)
+    tp_medium = np.zeros(nd)
+    tp_large = np.zeros(nd)
+    fp_small = np.zeros(nd)
+    fp_medium = np.zeros(nd)
+    fp_large = np.zeros(nd)
+
     for d in range(nd):
         R = class_recs[image_ids[d]]
         bb = BB[d, :].astype(float)
@@ -198,7 +236,6 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
 
         if BBGT.size > 0:
             # compute overlaps
-            # intersection
             ixmin = np.maximum(BBGT[:, 0], bb[0])
             iymin = np.maximum(BBGT[:, 1], bb[1])
             ixmax = np.minimum(BBGT[:, 2], bb[2])
@@ -221,20 +258,148 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
         if ovmax > ovthresh:
             if not R["difficult"][jmax]:
                 if not R["det"][jmax]:
-                    tp[d] = 1.0
+                    tp[d] = 1.0  # Mark as true positive
+                    area = (BBGT[jmax, 2] - BBGT[jmax, 0]) * (BBGT[jmax, 3] - BBGT[jmax, 1])
+                    if area < small_thresh:
+                        tp_small[d] = 1.0
+                    elif area < medium_thresh:
+                        tp_medium[d] = 1.0
+                    else:
+                        tp_large[d] = 1.0
                     R["det"][jmax] = 1
                 else:
-                    fp[d] = 1.0
+                    fp[d] = 1.0  # False positive (duplicate detection)
+                    area = (BBGT[jmax, 2] - BBGT[jmax, 0]) * (BBGT[jmax, 3] - BBGT[jmax, 1])
+                    if area < small_thresh:
+                        fp_small[d] = 1.0
+                    elif area < medium_thresh:
+                        fp_medium[d] = 1.0
+                    else:
+                        fp_large[d] = 1.0
         else:
-            fp[d] = 1.0
+            fp[d] = 1.0  # False positive (no matching ground truth)
+            area = (bb[2] - bb[0]) * (bb[3] - bb[1])
+            if area < small_thresh:
+                fp_small[d] = 1.0
+            elif area < medium_thresh:
+                fp_medium[d] = 1.0
+            else:
+                fp_large[d] = 1.0
 
-    # compute precision recall
-    fp = np.cumsum(fp)
-    tp = np.cumsum(tp)
-    rec = tp / float(npos)
-    # avoid divide by zero in case the first detection matches a difficult
-    # ground truth
-    prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
+    # compute precision recall for small, medium, and large objects
+    def compute_rec_prec(tp, fp, npos):
+        fp = np.cumsum(fp)
+        tp = np.cumsum(tp)
+        rec = tp / float(npos)
+        prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
+        return rec, prec
+
+    # Calculate precision and recall for each size category
+    rec_small, _ = compute_rec_prec(tp_small, fp_small, npos_small)
+    rec_medium, _ = compute_rec_prec(tp_medium, fp_medium, npos_medium)
+    rec_large, _ = compute_rec_prec(tp_large, fp_large, npos_large)
+
+    # Compute overall precision and recall
+    rec, prec = compute_rec_prec(tp, fp, npos)
+    
+    # compute AP (average precision)
     ap = voc_ap(rec, prec, use_07_metric)
+    recall = {}
+    if npos_small > 0 and len(rec_small):
+        recall["rec_small"] = rec_small[-1]
+    if npos_medium > 0 and len(rec_medium):
+        recall["rec_medium"] = rec_medium[-1]
+    if npos_large > 0 and len(rec_large):
+        recall["rec_large"] = rec_large[-1]
+        
+    return recall, prec, ap
 
-    return rec, prec, ap
+# def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_metric=False):
+#     with PathManager.open(imagesetfile, "r") as f:
+#         lines = f.readlines()
+#     imagenames = [x.strip() for x in lines]
+
+#     # load annots
+#     recs = {}
+#     for imagename in imagenames:
+#         recs[imagename] = parse_rec(annopath.format(imagename))
+
+#     # extract gt objects for this class
+#     class_recs = {}
+#     npos = 0
+#     for imagename in imagenames:
+#         R = [obj for obj in recs[imagename] if obj["name"] == classname]
+#         bbox = np.array([x["bbox"] for x in R])
+#         difficult = np.array([x["difficult"] for x in R]).astype(np.bool)
+#         # difficult = np.array([False for x in R]).astype(np.bool)  # treat all "difficult" as GT
+#         det = [False] * len(R)
+#         npos = npos + sum(~difficult)
+#         class_recs[imagename] = {"bbox": bbox, "difficult": difficult, "det": det}
+
+#     # read dets
+#     detfile = detpath.format(classname)
+#     with open(detfile, "r") as f:
+#         lines = f.readlines()
+
+#     splitlines = [x.strip().split(" ") for x in lines]
+#     image_ids = [x[0] for x in splitlines]
+#     confidence = np.array([float(x[1]) for x in splitlines])
+#     BB = np.array([[float(z) for z in x[2:]] for x in splitlines]).reshape(-1, 4)
+
+#     # sort by confidence
+#     sorted_ind = np.argsort(-confidence)
+#     BB = BB[sorted_ind, :]
+#     image_ids = [image_ids[x] for x in sorted_ind]
+
+#     # go down dets and mark TPs and FPs
+#     nd = len(image_ids)
+#     tp = np.zeros(nd)
+#     fp = np.zeros(nd)
+#     for d in range(nd):
+#         R = class_recs[image_ids[d]]
+#         bb = BB[d, :].astype(float)
+#         ovmax = -np.inf
+#         BBGT = R["bbox"].astype(float)
+
+#         if BBGT.size > 0:
+#             # compute overlaps
+#             # intersection
+#             ixmin = np.maximum(BBGT[:, 0], bb[0])
+#             iymin = np.maximum(BBGT[:, 1], bb[1])
+#             ixmax = np.minimum(BBGT[:, 2], bb[2])
+#             iymax = np.minimum(BBGT[:, 3], bb[3])
+#             iw = np.maximum(ixmax - ixmin + 1.0, 0.0)
+#             ih = np.maximum(iymax - iymin + 1.0, 0.0)
+#             inters = iw * ih
+
+#             # union
+#             uni = (
+#                 (bb[2] - bb[0] + 1.0) * (bb[3] - bb[1] + 1.0)
+#                 + (BBGT[:, 2] - BBGT[:, 0] + 1.0) * (BBGT[:, 3] - BBGT[:, 1] + 1.0)
+#                 - inters
+#             )
+
+#             overlaps = inters / uni
+#             ovmax = np.max(overlaps)
+#             jmax = np.argmax(overlaps)
+
+#         if ovmax > ovthresh:
+#             if not R["difficult"][jmax]:
+#                 if not R["det"][jmax]:
+#                     tp[d] = 1.0
+#                     R["det"][jmax] = 1
+#                 else:
+#                     fp[d] = 1.0
+#         else:
+#             fp[d] = 1.0
+
+#     # compute precision recall
+#     fp = np.cumsum(fp)
+#     tp = np.cumsum(tp)
+#     rec = tp / float(npos)
+#     # avoid divide by zero in case the first detection matches a difficult
+#     # ground truth
+#     prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
+#     ap = voc_ap(rec, prec, use_07_metric)
+
+#     return rec, prec, ap

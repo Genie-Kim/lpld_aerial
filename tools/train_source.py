@@ -69,6 +69,7 @@ from detectron2.modeling import build_model
 from detectron2.solver import build_lr_scheduler, build_optimizer
 from detectron2.utils.events import EventStorage
 from torch.nn.parallel import DistributedDataParallel
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
 
 logger = logging.getLogger("detectron2")
@@ -185,8 +186,9 @@ def do_test(cfg, model):
 def do_train(cfg, model, resume=False):
     model.train()
     optimizer = build_optimizer(cfg, model)
-    scheduler = build_lr_scheduler(cfg, optimizer)
-
+    # scheduler = build_lr_scheduler(cfg, optimizer)
+    scheduler = ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=cfg.SOLVER.PATIENCE, eps=1e-8)
+    # get_last_lr()
     checkpointer = DetectionCheckpointer(
         model, cfg.OUTPUT_DIR, optimizer=optimizer, scheduler=scheduler
     )
@@ -210,6 +212,8 @@ def do_train(cfg, model, resume=False):
     # precise BN here, because they are not trivial to implement in a small training loop
     data_loader = build_detection_train_loader(cfg)
     logger.info("Starting training from iteration {}".format(start_iter))
+
+    best_mAP = 0
     with EventStorage(start_iter) as storage:
         progress_bar = tqdm(zip(data_loader, range(start_iter, max_iter)))
         for data, iteration in progress_bar:
@@ -233,7 +237,7 @@ def do_train(cfg, model, resume=False):
             storage.put_scalar(
                 "lr", optimizer.param_groups[0]["lr"], smoothing_hint=False
             )
-            scheduler.step()
+            # scheduler.step()
             
             progress_bar.set_description(
                     f"[{iteration}/{max_iter}] "+''.join([f'{k}: {v.item():.4f}, ' for k,v in loss_dict.items()])
@@ -245,15 +249,25 @@ def do_train(cfg, model, resume=False):
                 and iteration != max_iter - 1
             ):
                 results = do_test(cfg, model)
+                mAP = results['bbox']['AP50']
+                scheduler.step(mAP)
                 class_ap50 = results['bbox'].pop('class-AP50')
+                # scheduler.step(class_ap50[0])
                 class_ap50 = {f'class-AP50/{k}': v for k,v in enumerate(class_ap50)}
                 storage.put_scalars(**results['bbox'])
                 storage.put_scalars(**class_ap50)
                 for writer in writers:
                     writer.write()
+                
+                if mAP > best_mAP:
+                    best_mAP = mAP
+                    checkpointer.save("best_mAP")
+                    logger.info(f'Save Best Score: {best_mAP:.4f}')
+                    
                 torch.save(model.state_dict(), os.path.join(cfg.OUTPUT_DIR, "model_{}.pth".format(iteration)))
                 # Compared to "train_net.py", the test results are not dumped to EventStorage
                 comm.synchronize()
+
                 
             elif iteration - start_iter > 5 and (
                 (iteration + 1) % 20 == 0 or iteration == max_iter - 1

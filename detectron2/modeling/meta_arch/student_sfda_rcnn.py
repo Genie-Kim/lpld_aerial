@@ -176,7 +176,7 @@ class student_sfda_RCNN(nn.Module):
         if iou_matrix.shape[1] == 0:
             return losses
 
-        t_indices = torch.nonzero(torch.max(iou_matrix, dim=1).values <= 0.1).flatten()
+        t_indices = torch.nonzero(torch.max(iou_matrix, dim=1).values <= 0.4).flatten()
         if t_indices.nelement() == 0:
             return losses
 
@@ -184,7 +184,7 @@ class student_sfda_RCNN(nn.Module):
         t_softmax_wo_bg = F.softmax(t_roih_logits[0][t_indices][:, :-1], dim=1)
         wo_bg_max = torch.max(t_softmax_wo_bg, dim=1)[0]
         w_bg_prob = t_softmax_w_bg[:, -1]
-        t_indices_filtered = t_indices[(wo_bg_max >= 0.9) & (w_bg_prob <= 0.95)]
+        t_indices_filtered = t_indices[(wo_bg_max >= 0.9) & (w_bg_prob <= 0.99)]
 
         if t_indices_filtered.nelement() == 0:
             return losses

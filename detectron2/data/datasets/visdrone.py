@@ -9,7 +9,8 @@ from detectron2.utils.file_io import PathManager
 
 __all__ = ["load_visdrone_instances", "register_visdrone"]
 
-CLASS_NAMES = ('pedestrian', 'people', 'bicycle', 'car', 'van', 'truck', 'tricycle', 'awning-tricycle', 'bus', 'motor')
+# CLASS_NAMES = ('pedestrian', 'people', 'bicycle', 'car', 'van', 'truck', 'tricycle', 'awning-tricycle', 'bus', 'motor')
+CLASS_NAMES = ('pedestrian', 'people', 'car', 'van', 'truck', 'bus', 'motor')
 
 def load_visdrone_instances(dirname: str, split: str, class_names: Union[List[str], Tuple[str, ...]]):
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:

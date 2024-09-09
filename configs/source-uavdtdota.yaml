@@ -16,16 +16,17 @@ INPUT:
   MIN_SIZE_TRAIN: (800,)
   MIN_SIZE_TEST: 800
 DATASETS:
-  TRAIN: ("gtav10k_train",)
-  TEST: ("gtav10k_val",)
+  TRAIN: ("uavdtdota_train_14000",)
+  TEST: ("uavdtdota_val_daylight",)
 SOLVER:
-  BASE_LR: 0.008
+  BASE_LR: 0.0002
   STEPS: (50000,)
   MAX_ITER: 150000
   IMS_PER_BATCH: 8
-  PATIENCE: 3
+  PATIENCE: 5
 TEST:
   EVAL_PERIOD: 2000
-OUTPUT_DIR: "checkpoint/gtav10k_source_v11"
+OUTPUT_DIR: "checkpoint/uavdtdota_source_v12"
 DATALOADER:
   NUM_WORKERS: 16
+SEED: 55405391

@@ -31,7 +31,7 @@ from .catalog import MetadataCatalog
 
 import pdb
 from PIL import Image
-from .transforms.augmentation_impl import GaussianBlur 
+from .transforms.augmentation_impl import GaussianBlurring
 
 
 __all__ = [
@@ -624,6 +624,33 @@ def build_augmentation(cfg, is_train):
                 vertical=cfg.INPUT.RANDOM_FLIP == "vertical",
             )
         )
+        if cfg.SOURCE_FREE.TYPE == False:
+            augmentation.append(
+                T.RandomApply(T.AugmentationList([
+                    T.RandomBrightness(1-0.4, 1+0.4),
+                    T.RandomContrast(1-0.4, 1+0.4),
+                    T.RandomSaturation(1-0.4, 1+0.4)]), prob=0.8)
+            )
+            augmentation.append(T.RandomApply(T.GaussianBlur([0.1, 2.0]), prob=0.5))
+            augmentation.append(T.RandomErasing(p=0.7, scale=(0.001, 0.004), ratio=(0.3, 3.3)))
+            augmentation.append(T.RandomErasing(p=0.7, scale=(0.001, 0.004), ratio=(0.1, 6)))
+            augmentation.append(T.RandomErasing(p=0.7, scale=(0.001, 0.004), ratio=(0.05, 8)))
+            augmentation.append(T.RandomErasing(p=0.7, scale=(0.001, 0.004), ratio=(0.3, 3.3)))
+            augmentation.append(T.RandomErasing(p=0.7, scale=(0.001, 0.004), ratio=(0.1, 6)))
+            augmentation.append(T.RandomErasing(p=0.7, scale=(0.001, 0.004), ratio=(0.05, 8)))
+            augmentation.append(T.RandomErasing(p=0.7, scale=(0.001, 0.004), ratio=(0.3, 3.3)))
+            augmentation.append(T.RandomErasing(p=0.7, scale=(0.001, 0.004), ratio=(0.1, 6)))
+            augmentation.append(T.RandomErasing(p=0.7, scale=(0.001, 0.004), ratio=(0.05, 8)))
+            augmentation.append(T.RandomErasing(p=0.7, scale=(0.001, 0.004), ratio=(0.3, 3.3)))
+            augmentation.append(T.RandomErasing(p=0.7, scale=(0.001, 0.004), ratio=(0.1, 6)))
+            augmentation.append(T.RandomErasing(p=0.7, scale=(0.001, 0.004), ratio=(0.05, 8)))
+            augmentation.append(T.RandomErasing(p=0.7, scale=(0.001, 0.004), ratio=(0.3, 3.3)))
+            augmentation.append(T.RandomErasing(p=0.7, scale=(0.001, 0.004), ratio=(0.1, 6)))
+            augmentation.append(T.RandomErasing(p=0.7, scale=(0.001, 0.004), ratio=(0.05, 8)))
+            # augmentation.append(T.RandomErasing(p=0.7, scale=(0.05, 0.2), ratio=(0.3, 3.3)))
+            # augmentation.append(T.RandomErasing(p=0.5, scale=(0.02, 0.2), ratio=(0.1, 6)))
+            # augmentation.append(T.RandomErasing(p=0.3, scale=(0.02, 0.2), ratio=(0.05, 8)))
+            
         # augmentation.append(
         #     T.Normalize(cfg.MODEL.PIXEL_MEAN, cfg.MODEL.PIXEL_STD, inplace=False)
         # )
@@ -652,7 +679,7 @@ def build_strong_augmentation(cfg, is_train):
             transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8)
         )
         augmentation.append(transforms.RandomGrayscale(p=0.2))
-        augmentation.append(transforms.RandomApply([GaussianBlur([0.1, 2.0])], p=0.5))
+        augmentation.append(transforms.RandomApply([GaussianBlurring([0.1, 2.0])], p=0.5))
 
         randcrop_transform = transforms.Compose(
             [

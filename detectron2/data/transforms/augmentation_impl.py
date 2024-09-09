@@ -25,6 +25,15 @@ from PIL import ImageFilter
 from .augmentation import Augmentation, _transform_to_aug
 from .transform import ExtentTransform, ResizeTransform, RotationTransform
 
+import numbers
+import warnings
+import math
+from typing import List, Optional, Tuple, Union
+from torch import Tensor
+from scipy.ndimage import gaussian_filter
+
+
+
 __all__ = [
     "FixedSizeCrop",
     "RandomApply",
@@ -41,6 +50,8 @@ __all__ = [
     "ResizeShortestEdge",
     "RandomCrop_CategoryAreaConstraint",
     "GaussianBlur",
+    "RandomErasing",
+    "GaussianBlurring"
 ]
 
 
@@ -109,7 +120,7 @@ class RandomFlip(Augmentation):
         else:
             return NoOpTransform()
 
-class GaussianBlur:
+class GaussianBlurring:
     """
     Gaussian blur augmentation in SimCLR https://arxiv.org/abs/2002.05709
     Adapted from MoCo:
@@ -634,3 +645,180 @@ class RandomLighting(Augmentation):
         return BlendTransform(
             src_image=self.eigen_vecs.dot(weights * self.eigen_vals), src_weight=1.0, dst_weight=1.0
         )
+
+
+
+class RandomErasing(Augmentation):
+    def __init__(self, p=0.5, scale=(0.02, 0.33), ratio=(0.3, 3.3)):
+        # random erasing with random values
+        super().__init__()
+        if not isinstance(scale, (tuple, list)):
+            raise TypeError("Scale should be a sequence")
+        if not isinstance(ratio, (tuple, list)):
+            raise TypeError("Ratio should be a sequence")
+        if (scale[0] > scale[1]) or (ratio[0] > ratio[1]):
+            warnings.warn("Scale and ratio should be of kind (min, max)")
+        if scale[0] < 0 or scale[1] > 1:
+            raise ValueError("Scale should be between 0 and 1")
+        if p < 0 or p > 1:
+            raise ValueError("Random erasing probability should be between 0 and 1")
+
+        self.p = p
+        self.scale = scale
+        self.ratio = ratio
+
+    @staticmethod
+    def get_params(img: np.ndarray, scale: Tuple[float, float], ratio: Tuple[float, float]) -> Tuple[int, int, int, int, np.ndarray]:
+        """Get parameters for `erase` for a random erasing.
+
+        Args:
+            img (np.ndarray): Numpy array image to be erased.
+            scale (sequence): range of proportion of erased area against input image.
+            ratio (sequence): range of aspect ratio of erased area.
+
+        Returns:
+            tuple: params (i, j, h, w, v) to be passed to `erase` for random erasing.
+        """
+        img_h, img_w, img_c = img.shape[-3], img.shape[-2], img.shape[-1]
+        area = img_h * img_w
+
+        log_ratio = np.log(np.array(ratio))
+        for _ in range(10):
+            erase_area = area * np.random.uniform(scale[0], scale[1])
+            aspect_ratio = np.exp(np.random.uniform(log_ratio[0], log_ratio[1]))
+
+            h = int(round(math.sqrt(erase_area * aspect_ratio)))
+            w = int(round(math.sqrt(erase_area / aspect_ratio)))
+            if not (h < img_h and w < img_w):
+                continue
+
+            v = np.random.randn(h, w, img_c).astype(img.dtype)
+
+            i = np.random.randint(0, img_h - h + 1)
+            j = np.random.randint(0, img_w - w + 1)
+            return i, j, h, w, v
+
+        # Return original image
+        return 0, 0, img_h, img_w, img
+
+    def get_transform(self, image):
+        
+        if torch.rand(1) < self.p:
+
+            # cast self.value to script acceptable type
+            x, y, h, w, v = self.get_params(image, scale=self.scale, ratio=self.ratio)
+            return BoxEraseTransform(x=x,y=y,h=h,w=w,v=v)
+        return NoOpTransform()
+
+class BoxEraseTransform(Transform):
+    def __init__(self, x, y, h, w, v):
+        super().__init__()
+        self.x=x
+        self.y=y
+        self.h=h
+        self.w=w
+        self.v=v
+
+    def apply_image(self, img: np.ndarray) -> np.ndarray:
+        output = np.copy(img)
+        output[self.x:self.x+self.h,self.y:self.y+self.w] = self.v
+        return output
+
+    def apply_coords(self, coords: np.ndarray) -> np.ndarray:
+        """
+        Apply no transform on the coordinates.
+        """
+        return coords
+    
+    def apply_segmentation(self, segmentation: np.ndarray) -> np.ndarray:
+        """
+        Apply no transform on the full-image segmentation.
+        """
+        return segmentation
+
+    def inverse(self) -> Transform:
+        """
+        The inverse is a no-op.
+        """
+        return NoOpTransform()
+
+
+class GaussianBlur(Transform):
+    """
+    Gaussian blur augmentation in SimCLR https://arxiv.org/abs/2002.05709
+    Adapted from MoCo:
+    https://github.com/facebookresearch/moco/blob/master/moco/loader.py
+    Note that this implementation does not seem to be exactly the same as
+    described in SimCLR.
+    """
+    def __init__(self, sigma=[0.1, 2.0]):
+        super().__init__()
+        self.sigma = sigma
+
+    def apply_image(self, img: np.ndarray) -> np.ndarray:
+        # Randomly select a sigma value within the specified range
+        sigma = random.uniform(self.sigma[0], self.sigma[1])
+        blurred_img = np.copy(img)
+        # Apply Gaussian blur using the selected sigma value
+        blurred_img = gaussian_filter(blurred_img, sigma=sigma)
+        
+        return blurred_img
+
+
+    def apply_coords(self, coords: np.ndarray) -> np.ndarray:
+        """
+        Apply no transform on the coordinates.
+        """
+        return coords
+
+    def apply_segmentation(self, segmentation: np.ndarray) -> np.ndarray:
+        """
+        Apply no transform on the full-image segmentation.
+        """
+        return segmentation
+
+    def inverse(self) -> Transform:
+        """
+        The inverse is a no-op.
+        """
+        return NoOpTransform()
+    
+
+    
+    # @staticmethod
+    # def get_params(
+    #     img: Tensor, scale: Tuple[float, float], ratio: Tuple[float, float]) -> Tuple[int, int, int, int, Tensor]:
+    #     """Get parameters for ``erase`` for a random erasing.
+
+    #     Args:
+    #         img (Tensor): Tensor image to be erased.
+    #         scale (sequence): range of proportion of erased area against input image.
+    #         ratio (sequence): range of aspect ratio of erased area.
+    #         value (list, optional): erasing value. If None, it is interpreted as "random"
+    #             (erasing each pixel with random values). If ``len(value)`` is 1, it is interpreted as a number,
+    #             i.e. ``value[0]``.
+
+    #     Returns:
+    #         tuple: params (i, j, h, w, v) to be passed to ``erase`` for random erasing.
+    #     """
+    #     img_h, img_w = img.shape[:2]
+    #     area = img_h * img_w
+
+    #     log_ratio = torch.log(torch.tensor(ratio))
+    #     for _ in range(10):
+    #         erase_area = area * torch.empty(1).uniform_(scale[0], scale[1]).item()
+    #         aspect_ratio = torch.exp(torch.empty(1).uniform_(log_ratio[0], log_ratio[1])).item()
+
+    #         h = int(round(math.sqrt(erase_area * aspect_ratio)))
+    #         w = int(round(math.sqrt(erase_area / aspect_ratio)))
+    #         if not (h < img_h and w < img_w):
+    #             continue
+
+    #         v = torch.empty([h, w], dtype=torch.float32).normal_()
+
+    #         i = torch.randint(0, img_h - h + 1, size=(1,)).item()
+    #         j = torch.randint(0, img_w - w + 1, size=(1,)).item()
+    #         return i, j, h, w, v
+
+    #     # Return original image
+    #     return 0, 0, img_h, img_w, img

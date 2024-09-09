@@ -3,24 +3,28 @@ MODEL:
   WEIGHT: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
   MASK_ON: False
   ROI_HEADS:
-    NUM_CLASSES: 15
+    NUM_CLASSES: 3
   RESNETS:
-    DEPTH: 50
     NORM: "FrozenBN" 
     OUT_FEATURES: ["res4"]
+    DEPTH: 50
+  RPN:
+    PRE_NMS_TOPK_TEST: 6000
+    POST_NMS_TOPK_TEST: 300
+    ANCHOR_SIZES: (32, 64, 128, 256)
 INPUT:
-  MIN_SIZE_TRAIN: (800, 900, 1000, 1100, 1200)
-  MAX_SIZE_TRAIN: 1999
-  MIN_SIZE_TEST: 1200
-  MAX_SIZE_TEST: 1999
+  MIN_SIZE_TRAIN: (800,)
+  MIN_SIZE_TEST: 800
 DATASETS:
-  TRAIN: ("dota_train",)
-  TEST: ("dota_val",)
+  TRAIN: ("uavdtdota_train_daylight",)
+  TEST: ("dota_val_debug",)
 SOLVER:
   BASE_LR: 0.01
   STEPS: (10,)
   MAX_ITER: 21
-  IMS_PER_BATCH: 4
+  IMS_PER_BATCH: 8
 TEST:
   EVAL_PERIOD: 20
-OUTPUT_DIR: "checkpoint/debugdota_source"
+OUTPUT_DIR: "checkpoint/dotadebug_source"
+DATALOADER:
+  NUM_WORKERS: 16

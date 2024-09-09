@@ -407,6 +407,8 @@ def register_all_dota(root):
     SPLITS = [
         ("dota_train", "dota_voc", "train"),
         ("dota_val", "dota_voc", "val"),
+        ("dota_val_debug", "dota_voc", "valdebug"),
+        
     ]
     for name, dirname, split in SPLITS:
         year = 2007 if "2007" in name else 2012
@@ -445,6 +447,7 @@ def register_all_visdronedota(root):
         
 def register_all_uavdt(root):
     SPLITS = [
+        ("uavdt_train_14000", "uavdt_voc", "train_14000"),
         ("uavdt_train_daylight", "uavdt_voc", "train_daylight"),
         ("uavdt_val_daylight", "uavdt_voc", "val_daylight"),
         ("uavdt_train_fog", "uavdt_voc", "train_fog"),
@@ -459,8 +462,13 @@ def register_all_uavdt(root):
 
 def register_all_uavdtdota(root):
     SPLITS = [
-        ("uavdtdota_train", "uavdt_voc", "train_daylight"),
-        ("uavdtdota_val", "uavdt_voc", "val_daylight"),
+        ("uavdtdota_train_14000", "uavdt_voc", "train_14000"),
+        ("uavdtdota_train_daylight", "uavdt_voc", "train_daylight"),
+        ("uavdtdota_val_daylight", "uavdt_voc", "val_daylight"),
+        ("uavdtdota_train_fog", "uavdt_voc", "train_fog"),
+        ("uavdtdota_val_fog", "uavdt_voc", "val_fog"),
+        ("uavdtdota_train_night", "uavdt_voc", "train_night"),
+        ("uavdtdota_val_night", "uavdt_voc", "val_night"),
     ]
     for name, dirname, split in SPLITS:
         year = 2007 if "2007" in name else 2012
