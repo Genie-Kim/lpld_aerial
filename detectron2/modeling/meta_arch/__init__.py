@@ -9,6 +9,7 @@ from .panoptic_fpn import PanopticFPN
 from .rcnn import GeneralizedRCNN, ProposalNetwork
 from .student_sfda_rcnn import student_sfda_RCNN
 from .teacher_sfda_rcnn import teacher_sfda_RCNN
+from .student_sfda_rcnn_include_ablation import student_sfda_RCNN_ablation
 from .retinanet import RetinaNet
 from .semantic_seg import SEM_SEG_HEADS_REGISTRY, SemanticSegmentor, build_sem_seg_head
 

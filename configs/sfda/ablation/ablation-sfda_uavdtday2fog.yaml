@@ -1,5 +1,5 @@
 MODEL:
-  META_ARCHITECTURE: "student_sfda_RCNN"
+  META_ARCHITECTURE: "student_sfda_RCNN_ablation"
   WEIGHT: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
   MASK_ON: False
   ROI_HEADS:
@@ -16,8 +16,8 @@ INPUT:
   MIN_SIZE_TRAIN: (800,)
   MIN_SIZE_TEST: 800
 DATASETS:
-  TRAIN: ("uavdtdota_train_night",)
-  TEST: ("uavdtdota_val_night",)
+  TRAIN: ("uavdtdota_train_fog",)
+  TEST: ("uavdtdota_val_fog",)
 SOLVER:
   BASE_LR: 0.001
   WEIGHT_DECAY: 0.0001
@@ -34,4 +34,4 @@ DATALOADER:
   NUM_WORKERS: 16
 TEST:
   EVAL_PERIOD: 2000
-OUTPUT_DIR: "./checkpoints_sfda/uavdtday2night"
+OUTPUT_DIR: "./checkpoints_sfda/uavdtday2fog"

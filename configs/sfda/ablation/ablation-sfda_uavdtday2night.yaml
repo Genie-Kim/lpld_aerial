@@ -1,5 +1,5 @@
 MODEL:
-  META_ARCHITECTURE: "student_sfda_RCNN"
+  META_ARCHITECTURE: "student_sfda_RCNN_ablation"
   WEIGHT: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
   MASK_ON: False
   ROI_HEADS:

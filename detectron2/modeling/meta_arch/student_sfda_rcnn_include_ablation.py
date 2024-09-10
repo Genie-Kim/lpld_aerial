@@ -1,5 +1,4 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-import logging
 import numpy as np
 from typing import Dict, List, Optional, Tuple
 import torch
@@ -17,13 +16,11 @@ from ..proposal_generator import build_proposal_generator
 from ..roi_heads import build_roi_heads
 from .build import META_ARCH_REGISTRY
 import torch.nn.functional as F
-from .losses import GraphConLoss
-from .GCN import GCN
 
-__all__ = ["student_sfda_RCNN"]
+__all__ = ["student_sfda_RCNN_ablation"]
 
 @META_ARCH_REGISTRY.register()
-class student_sfda_RCNN(nn.Module):
+class student_sfda_RCNN_ablation(nn.Module):
     """
     student_sfda_RCNN R-CNN. Any models that contains the following three components:
     1. Per-image feature extraction (aka backbone)
@@ -67,9 +64,6 @@ class student_sfda_RCNN(nn.Module):
         assert (
             self.pixel_mean.shape == self.pixel_std.shape
         ), f"{self.pixel_mean} and {self.pixel_std} have different shapes!"
-        
-        self.GraphCN = GCN(nfeat=2048, nhid=512)
-        self.Graph_conloss = GraphConLoss()
 
     @classmethod
     def from_config(cls, cfg):
@@ -122,20 +116,28 @@ class student_sfda_RCNN(nn.Module):
             vis_name = "Left: GT bounding boxes;  Right: Predicted proposals"
             storage.put_image(vis_name, vis_img)
             break  # only visualize one image in a batch
-    
-    def KD_loss(self, student_logits, teacher_logits) :
-        teacher_prob = F.softmax(teacher_logits, dim=1)
-        student_log_prob = F.log_softmax(student_logits, dim=1)
-        KD_loss = F.kl_div(student_log_prob, teacher_prob.detach(), reduction='batchmean')
+
+    def KD_loss(self, student_logits, teacher_logits, weight=None):
+        teacher_probs = F.softmax(teacher_logits, dim=1)
+        student_probs = F.softmax(student_logits, dim=1)
+        teacher_probs = torch.cat([teacher_probs, 1e-9*torch.ones(teacher_probs.size(0), 1).cuda()], dim=1)
+        KD_loss = teacher_probs * (teacher_probs.log() - student_probs.log())
+        if weight is not None:
+            KD_loss = (KD_loss.sum(1)*weight).sum()/student_probs.size(0)
+        else:
+            KD_loss = KD_loss.sum()/student_probs.size(0)
 
         return KD_loss
-    
+
     def NormalizeData(self, data):
         return (data - np.min(data)) / (np.max(data) - np.min(data))
 
     def forward(self, batched_inputs: List[Dict[str, torch.Tensor]], cfg=None, model_teacher=None,
-                t_features=None, t_proposals=None, t_results=None, mode="test", ablation=1):
+                t_features=None, t_proposals=None, t_results=None, mode="test", ablation=1,
+                iou_threshold=0.4, lpl_threshold=0.9, bg_threshold=0.99):
         
+        info = {}
+
         if not self.training and mode == "test":
             return self.inference(batched_inputs)
 
@@ -152,12 +154,11 @@ class student_sfda_RCNN(nn.Module):
         _, detector_losses = self.roi_heads(images, features, proposals, t_results)
 
         losses = {}
-        losses.update(detector_losses)
-        losses.update(proposal_losses)
-        
-        if cfg.SOURCE_FREE.METHOD == "LPLD":
-        
-            # Extract features from the student and teacher models
+        if ablation not in [1, 2]:
+            losses.update(detector_losses)
+            losses.update(proposal_losses)
+
+        if "res4" in features:
             s_box_features = self.roi_heads._shared_roi_transform([features['res4']], [t_proposals[0].proposal_boxes]) #s_box_features = 300,2048,7,7
             s_box_features_mean = s_box_features.mean(dim=[2, 3])
             s_box_features_norm = F.normalize(s_box_features_mean, dim=1)
@@ -167,98 +168,80 @@ class student_sfda_RCNN(nn.Module):
             t_box_features_mean = t_box_features.mean(dim=[2, 3])
             t_box_features_norm = F.normalize(t_box_features_mean, dim=1)
             t_roih_logits = model_teacher.roi_heads.box_predictor(t_box_features_mean)
+        
+        else:
+            s_box_features = self.roi_heads.box_pooler([features['vgg4']], [t_proposals[0].proposal_boxes])
+            s_box_features = self.roi_heads.box_head(s_box_features)
+            s_box_features_norm = F.normalize(s_box_features, dim=1)
 
-            # Compute the cosine similarity between the student and teacher features
-            c_similarity = F.cosine_similarity(s_box_features_norm.detach(), t_box_features_norm.detach(), dim=1)
-            t_roih_classes = t_roih_logits[0].argmax(dim=1)
+            t_box_features = model_teacher.roi_heads.box_pooler([t_features['vgg4']], [t_proposals[0].proposal_boxes])
+            t_box_features = model_teacher.roi_heads.box_head(t_box_features)
+            t_box_features_norm = F.normalize(t_box_features, dim=1)
 
-            # Compute the LPL loss
-            t_proposal_boxes = cat([p.proposal_boxes.tensor for p in t_proposals], dim=0)
-            t_boxes = model_teacher.roi_heads.box_predictor.box2box_transform.apply_deltas(t_roih_logits[1], t_proposal_boxes)
-            t_box = torch.zeros(t_proposal_boxes.shape[0], 4).cuda()
+            s_roih_logits = self.roi_heads.box_predictor(s_box_features)
+            t_roih_logits = model_teacher.roi_heads.box_predictor(t_box_features)
 
-            for index, cl in enumerate(t_roih_classes):
-                if cl == self.roi_heads.num_classes:
-                    t_box[index] = t_proposal_boxes[index]
-                else:
-                    t_box[index] =  t_boxes[index, 4*cl:4*cl+4]
+        c_similarity = F.cosine_similarity(s_box_features_norm.detach(), t_box_features_norm.detach(), dim=1)
 
-            t_box_boxes = Boxes(t_box)
-            t_result_boxes = Boxes(t_results[0].gt_boxes.tensor)
-            iou_matrix = pairwise_iou(t_box_boxes, t_result_boxes)
+        info["t_logits"] = t_roih_logits[0]
+        info["s_logits"] = s_roih_logits[0]
+        t_roih_classes = t_roih_logits[0].argmax(dim=1)
 
-            if iou_matrix.shape[1] == 0:
-                return losses
+        t_proposal_boxes = cat([p.proposal_boxes.tensor for p in t_proposals], dim=0)
+        t_boxes = model_teacher.roi_heads.box_predictor.box2box_transform.apply_deltas(t_roih_logits[1], t_proposal_boxes)
+        t_box = torch.zeros(t_proposal_boxes.shape[0], 4).cuda()
 
-            t_indices = torch.nonzero(torch.max(iou_matrix, dim=1).values <= 0.4).flatten()
-            if t_indices.nelement() == 0:
-                return losses
+        for index, cl in enumerate(t_roih_classes):
+            if cl == self.roi_heads.num_classes:
+                t_box[index] = t_proposal_boxes[index]
+            else:
+                t_box[index] =  t_boxes[index, 4*cl:4*cl+4]
 
-            t_softmax_w_bg = F.softmax(t_roih_logits[0][t_indices], dim=1)
-            t_softmax_wo_bg = F.softmax(t_roih_logits[0][t_indices][:, :-1], dim=1)
-            wo_bg_max = torch.max(t_softmax_wo_bg, dim=1)[0]
-            w_bg_prob = t_softmax_w_bg[:, -1]
-            t_indices_filtered = t_indices[(wo_bg_max >= 0.9) & (w_bg_prob <= 0.99)]
+        t_box_boxes = Boxes(t_box)
+        t_result_boxes = Boxes(t_results[0].gt_boxes.tensor)
+        iou_matrix = pairwise_iou(t_box_boxes, t_result_boxes)
 
-            if t_indices_filtered.nelement() == 0:
-                return losses
+        if iou_matrix.shape[1] == 0:
+            return losses, None, t_box_boxes, info
 
-            losses["lpl_kl"] = self._kl_divergence(s_roih_logits[0][t_indices_filtered],
+        t_indices = torch.nonzero(torch.max(iou_matrix, dim=1).values <= iou_threshold).flatten()
+        if t_indices.nelement() == 0:
+            return losses, None, t_box_boxes, info
+
+        info["t_indices"] = t_indices
+        info["s_features"] = s_box_features_norm[t_indices].detach().cpu().numpy()
+        info["t_features"] = t_box_features_norm[t_indices].detach().cpu().numpy()
+        info["c_similarity"] = c_similarity
+
+        t_softmax_w_bg = F.softmax(t_roih_logits[0][t_indices], dim=1)
+        t_softmax_wo_bg = F.softmax(t_roih_logits[0][t_indices][:, :-1], dim=1)
+        wo_bg_max = torch.max(t_softmax_wo_bg, dim=1)[0]
+        w_bg_prob = t_softmax_w_bg[:, -1]
+        t_indices_filtered = t_indices[(wo_bg_max >= lpl_threshold) & (w_bg_prob <= bg_threshold)]
+
+        if t_indices_filtered.nelement() == 0:
+            return losses, t_indices, t_box_boxes, info
+    
+        info["t_indices_filtered"] = t_indices_filtered
+        
+        if ablation in [1, 4]:
+            losses["hard_kd"] = 0.1*self.KD_loss(s_roih_logits[0][t_indices_filtered],
                                                 t_roih_logits[0][t_indices_filtered][:, :-1],
-                                                weight = 1-abs(c_similarity[t_indices_filtered]))
-        elif cfg.SOURCE_FREE.METHOD == "MTBASE":
-            pass
-        elif cfg.SOURCE_FREE.METHOD == "IRG":
-            s_box_features = self.roi_heads._shared_roi_transform([features['res4']], [t_proposals[0].proposal_boxes]) #t_proposals[0], results[1]
-            s_roih_logits = self.roi_heads.box_predictor(s_box_features.mean(dim=[2, 3]))
-
-            t_box_features = model_teacher.roi_heads._shared_roi_transform([t_features['res4']], [t_proposals[0].proposal_boxes])
-            t_roih_logits = model_teacher.roi_heads.box_predictor(t_box_features.mean(dim=[2, 3]))
-
-            s_graph_feat = self.GraphCN(s_box_features.mean(dim=[2, 3])) # TODO: Implement GraphCN
-            s_graph_logits = self.roi_heads.box_predictor(s_graph_feat)
+                                                weight=None)
             
-            t_graph_feat = self.GraphCN(t_box_features.mean(dim=[2, 3]))
-            t_graph_logits = model_teacher.roi_heads.box_predictor(t_graph_feat)
-
-            losses["st_const"] = self.KD_loss(s_roih_logits[0], t_roih_logits[0]) 
-            losses["s_graph_const"] = self.KD_loss(s_graph_logits[0], s_roih_logits[0]) 
-            losses["t_graph_const"] = self.KD_loss(t_graph_logits[0], t_roih_logits[0]) 
-            losses["graph_conloss"] = self.Graph_conloss(t_box_features.mean(dim=[2, 3]), s_box_features.mean(dim=[2, 3]), self.GraphCN)
-        else:
-            assert False, f"Unsupported SFDA method: {cfg.SFDA.METHOD}"
-
-        return losses
-
-    def _kl_divergence(self, student_logits, teacher_logits, weight=None):
-        teacher_probs = F.softmax(teacher_logits, dim=1)
-        student_probs = F.softmax(student_logits, dim=1)
-        teacher_probs = torch.cat([teacher_probs, 1e-9*torch.ones(teacher_probs.size(0), 1).cuda()], dim=1)
-        teacher_probs /= teacher_probs.sum(1, keepdim=True)
-        KL_loss = teacher_probs * (teacher_probs.log() - student_probs.log())
-        if weight is not None:
-            KL_loss = (KL_loss.sum(1)*weight).sum()/student_probs.size(0)
-        else:
-            KL_loss = KL_loss.sum()/student_probs.size(0)
-
-        return KL_loss/10
-
-    def _cross_entropy(self, student_logits, teacher_logits, weight=None):
-        teacher_pred_cls = teacher_logits.argmax(dim=1)
-        CE_loss = F.cross_entropy(student_logits, teacher_pred_cls, reduction='none')
-        if weight is not None:
-            CE_loss = (CE_loss*weight).sum()/student_logits.size(0)
-        else:
-            CE_loss = CE_loss.sum()/student_logits.size(0)
-
-        return CE_loss/10
+        elif ablation in [0, 2]:
+            losses["hard_kd"] = 0.1*self.KD_loss(s_roih_logits[0][t_indices_filtered],
+                                                t_roih_logits[0][t_indices_filtered][:, :-1],
+                                                weight=1-c_similarity[t_indices_filtered])
+        
+        return losses, t_indices, t_box_boxes, info
 
     def inference(
         self,
         batched_inputs: List[Dict[str, torch.Tensor]],
         detected_instances: Optional[List[Instances]] = None,
         do_postprocess: bool = True,
-        ):
+    ):
         assert not self.training
 
         images = self.preprocess_image(batched_inputs)
@@ -278,7 +261,7 @@ class student_sfda_RCNN(nn.Module):
 
         if do_postprocess:
             assert not torch.jit.is_scripting(), "Scripting is not supported for postprocess."
-            return student_sfda_RCNN._postprocess(results, batched_inputs, images.image_sizes)
+            return student_sfda_RCNN_ablation._postprocess(results, batched_inputs, images.image_sizes)
         else:
             return results
 
@@ -288,7 +271,6 @@ class student_sfda_RCNN(nn.Module):
         """
         if mode == "train":
             images = [x["image_strong"].to(self.device) for x in batched_inputs]
-            #self.image_vis(images)
             images = [(x - self.pixel_mean) / self.pixel_std for x in images]
             images = ImageList.from_tensors(images, self.backbone.size_divisibility)
         elif mode == "test":

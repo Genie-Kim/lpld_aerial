@@ -5,7 +5,7 @@ MODEL:
   ROI_HEADS:
     NUM_CLASSES: 2
   RESNETS:
-    NORM: "FrozenBN" 
+    NORM: "FrozenBN"
     OUT_FEATURES: ["res4"]
     DEPTH: 50
   RPN:
@@ -16,8 +16,8 @@ INPUT:
   MIN_SIZE_TRAIN: (800,)
   MIN_SIZE_TEST: 800
 DATASETS:
-  TRAIN: ("uavdtdota_train_night",)
-  TEST: ("uavdtdota_val_night",)
+  TRAIN: ("uavdtdota_train_daylight",)
+  TEST: ("uavdtdota_val_daylight",)
 SOLVER:
   BASE_LR: 0.001
   WEIGHT_DECAY: 0.0001
@@ -28,10 +28,10 @@ SOURCE_FREE:
   TYPE: True
   MODE: True
   METHOD: "LPLD"
-  KEEP_RATE: 0.8
-  EMAPERIOD: 1000
+  KEEP_RATE: 0.75
+  EMAPERIOD: 3000
 DATALOADER:
   NUM_WORKERS: 16
 TEST:
   EVAL_PERIOD: 2000
-OUTPUT_DIR: "./checkpoints_sfda/uavdtday2night"
+OUTPUT_DIR: "./checkpoints_sfda/dota2uavdt"

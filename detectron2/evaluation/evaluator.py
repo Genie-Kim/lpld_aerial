@@ -8,10 +8,17 @@ from contextlib import ExitStack, contextmanager
 from typing import List, Union
 import torch
 from torch import nn
+import cv2
+import numpy as np
+
+import xml.etree.ElementTree as ET
+from detectron2.utils.file_io import PathManager
 import pdb
 
 from detectron2.utils.comm import get_world_size, is_main_process
 from detectron2.utils.logger import log_every_n_seconds
+from detectron2.structures import pairwise_iou, Boxes
+import matplotlib.pyplot as plt
 
 class DatasetEvaluator:
     """
@@ -100,8 +107,30 @@ class DatasetEvaluators(DatasetEvaluator):
                     results[k] = v
         return results
 
+def parse_rec(filename):
+    """Parse a PASCAL VOC xml file."""
+    with PathManager.open(filename) as f:
+        tree = ET.parse(f)
+    objects = []
+    for obj in tree.findall("object"):
+        obj_struct = {}
+        obj_struct["name"] = obj.find("name").text
+        obj_struct["pose"] = obj.find("pose").text
+        obj_struct["truncated"] = int(obj.find("truncated").text)
+        obj_struct["difficult"] = int(obj.find("difficult").text)
+        bbox = obj.find("bndbox")
+        obj_struct["bbox"] = [
+            int(bbox.find("xmin").text),
+            int(bbox.find("ymin").text),
+            int(bbox.find("xmax").text),
+            int(bbox.find("ymax").text),
+        ]
+        objects.append(obj_struct)
+
+    return objects
+
 def inference_on_dataset(
-    model, data_loader, evaluator):
+    model, data_loader, evaluator, draw=False, dirname="", return_tpfn=False):
     """
     Run model on the data_loader and evaluate the metrics with evaluator.
     Also benchmark the inference speed of `model.__call__` accurately.
@@ -139,6 +168,10 @@ def inference_on_dataset(
     total_data_time = 0
     total_compute_time = 0
     total_eval_time = 0
+    
+    if return_tpfn:
+        tp_height, tp_width = [], []
+        fn_height, fn_width = [], []
     with ExitStack() as stack:
         if isinstance(model, nn.Module):
             stack.enter_context(inference_context(model))
@@ -154,7 +187,63 @@ def inference_on_dataset(
                 total_eval_time = 0
 
             start_compute_time = time.perf_counter()
-            outputs = model(inputs) 
+            outputs = model(inputs)
+            if draw:            
+                sample = cv2.imread(inputs[0]["file_name"])
+                bbox_per_sample = []
+                for bbox in outputs[0]["instances"].pred_boxes.tensor.cpu().numpy():
+                    bbox_per_sample.append(bbox)
+                
+                for bbox in bbox_per_sample:
+                    cv2.rectangle(sample, (int(bbox[0]), int(bbox[1])),
+                                (int(bbox[2]), int(bbox[3])), (0, 0, 255), 2) # red color
+                
+                annopath = evaluator._anno_file_template
+                classnames = evaluator._class_names
+                img_id = inputs[0]["image_id"]
+                
+                annotations = parse_rec(annopath.format(img_id))
+                gt_boxes = np.array([x["bbox"] for x in annotations if x["name"] in classnames])
+                
+                if len(gt_boxes) > 0:
+                    for bbox in range(len(gt_boxes)):
+                        cv2.rectangle(sample, (gt_boxes[bbox][0], gt_boxes[bbox][1]),
+                                    (gt_boxes[bbox][2], gt_boxes[bbox][3]), (0, 255, 0), 2) # green color
+                    
+                    cv2.imwrite(os.path.join("./visualization", dirname, f"{img_id}.png"), sample)
+                    
+            if return_tpfn:
+                predictions = outputs[0]["instances"].pred_boxes.tensor.cpu()
+                pred_classes = outputs[0]["instances"].pred_classes.cpu()     
+                annopath = evaluator._anno_file_template
+                classnames = evaluator._class_names
+                img_id = inputs[0]["image_id"]
+                
+                annotations = parse_rec(annopath.format(img_id))
+                gt_boxes = np.array([x["bbox"] for x in annotations if x["name"] in classnames])
+                gt_classes = [classnames.index(x["name"]) for x in annotations if x["name"] in classnames]
+                
+                iou_results = pairwise_iou(Boxes(gt_boxes), Boxes(predictions))
+
+                if len(predictions) > 0:
+                    for i in range(len(iou_results)):
+                        max_value, max_index = iou_results[i].max(dim=0)
+                        if max_value > 0.5 and gt_classes[i] == pred_classes[max_index]:
+                            tp_height.append(float(gt_boxes[i][3] - gt_boxes[i][1]))
+                            tp_width.append(float(gt_boxes[i][2] - gt_boxes[i][0]))
+                        elif max_value == 0:
+                            fn_height.append(float(gt_boxes[i][3] - gt_boxes[i][1]))
+                            fn_width.append(float(gt_boxes[i][2] - gt_boxes[i][0]))
+                            
+                    plt.figure(figsize=(15, 8))
+                    plt.scatter(tp_width, tp_height, color='mediumseagreen', label=f'TP : {len(tp_height)}')
+                    plt.scatter(fn_width, fn_height, color='darkorange', label=f'FN : {len(fn_height)}')
+                    plt.xlabel('Width')
+                    plt.ylabel('Height')
+                    plt.legend(fontsize=15)
+                    plt.savefig("tpfn.png")
+                    plt.close()
+
             if torch.cuda.is_available():
                 torch.cuda.synchronize()
             total_compute_time += time.perf_counter() - start_compute_time

@@ -96,6 +96,10 @@ _C.SOURCE_FREE = CN()
 
 _C.SOURCE_FREE.TYPE = False
 _C.SOURCE_FREE.MODE = False
+_C.SOURCE_FREE.METHOD = "MTbase"
+_C.SOURCE_FREE.KEEP_RATE = 0.75
+_C.SOURCE_FREE.EMAPERIOD = 3000
+
 
 
 # -----------------------------------------------------------------------------

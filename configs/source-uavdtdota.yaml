@@ -16,7 +16,7 @@ INPUT:
   MIN_SIZE_TRAIN: (800,)
   MIN_SIZE_TEST: 800
 DATASETS:
-  TRAIN: ("uavdtdota_train_14000",)
+  TRAIN: ("uavdtdota_train_daylight",)
   TEST: ("uavdtdota_val_daylight",)
 SOLVER:
   BASE_LR: 0.0002
