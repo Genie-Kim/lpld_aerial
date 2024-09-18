@@ -25,6 +25,7 @@ from .visdrone_evaluation import VisDroneDetectionEvaluator
 from .visdronedota_evaluation import VisDroneDotaCBTDetectionEvaluator
 from .uavdt_evaluation import UAVDTDetectionEvaluator
 from .uavdtdota_evaluation import UAVDTDotaDetectionEvaluator
+from .uavdtgta_evaluation import UAVDTGtaDetectionEvaluator
 from .gtav10k_evaluation import GTAV10KDetectionEvaluator
 
 __all__ = [k for k in globals().keys() if not k.startswith("_")]

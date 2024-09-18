@@ -172,12 +172,14 @@ def inference_on_dataset(
     if return_tpfn:
         tp_height, tp_width = [], []
         fn_height, fn_width = [], []
+    results_imgs = {}
     with ExitStack() as stack:
         if isinstance(model, nn.Module):
             stack.enter_context(inference_context(model))
         stack.enter_context(torch.no_grad())
 
         start_data_time = time.perf_counter()
+        
         for idx, inputs in enumerate(data_loader):
             total_data_time += time.perf_counter() - start_data_time
             if idx == num_warmup:
@@ -206,9 +208,10 @@ def inference_on_dataset(
                 gt_boxes = np.array([x["bbox"] for x in annotations if x["name"] in classnames])
                 
                 if len(gt_boxes) > 0:
-                    for bbox in range(len(gt_boxes)):
-                        cv2.rectangle(sample, (gt_boxes[bbox][0], gt_boxes[bbox][1]),
-                                    (gt_boxes[bbox][2], gt_boxes[bbox][3]), (0, 255, 0), 2) # green color
+                    # draw ground truth boxes with green color
+                    # for bbox in range(len(gt_boxes)):
+                    #     cv2.rectangle(sample, (gt_boxes[bbox][0], gt_boxes[bbox][1]),
+                    #                 (gt_boxes[bbox][2], gt_boxes[bbox][3]), (0, 255, 0), 2) # green color
                     
                     cv2.imwrite(os.path.join("./visualization", dirname, f"{img_id}.png"), sample)
                     
@@ -250,6 +253,14 @@ def inference_on_dataset(
 
             start_eval_time = time.perf_counter()
             evaluator.process(inputs, outputs)
+            
+            if draw:
+                ###### results = OrderedDict([('bbox', {'AP': 0.454, 'AP50': 0.454, 'AP75': 0.454})])
+                results = evaluator.evaluate()
+                # save results of each images
+                results_imgs[img_id] = [results['bbox']['AP50']]
+                results_imgs[img_id]+= [v for k,v in results['bbox']['class-AP50'].items()]
+
             total_eval_time += time.perf_counter() - start_eval_time
 
             iters_after_start = idx + 1 - num_warmup * int(idx >= num_warmup)
@@ -274,8 +285,21 @@ def inference_on_dataset(
     #         total_compute_time_str, total_compute_time / (total - num_warmup), num_devices
     #     )
     # )
-    
+    if draw:
+        import csv
+        with open(os.path.join("./quantitatives",f"{dirname}.csv"), mode='w', newline='') as file:
+            writer = csv.writer(file)
+            
+            # Writing the header
+            header = ['imgid', 'AP50']+[evaluator._class_names[k] for k,v in results['bbox']['class-AP50'].items()]
+            writer.writerow(header)
+            
+            # Writing the data rows
+            for imgid, values in results_imgs.items():
+                writer.writerow([imgid] + values)
+           
     ###### results = OrderedDict([('bbox', {'AP': 0.454, 'AP50': 0.454, 'AP75': 0.454})])
+    # TODO: check the results outputs not changing.
     results = evaluator.evaluate()
     # An evaluator may return None when not in main process.
     # Replace it by an empty dict instead to make it easier for downstream code to handle

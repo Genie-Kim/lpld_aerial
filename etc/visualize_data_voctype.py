@@ -43,7 +43,7 @@ def visualize_annotations(image_path, xml_file):
 import os
 dataset='uavdt_voc'
 ext = 'jpg'
-image_id = 'M0605_img000765'
+image_id = 'M0701_img001143'
 
 datasetpath = os.path.join('dataset', dataset)
 image_path = os.path.join(datasetpath, 'JPEGImages', f'{image_id}.{ext}')

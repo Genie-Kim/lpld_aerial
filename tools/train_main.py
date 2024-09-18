@@ -47,6 +47,7 @@ from detectron2.evaluation import (
     DOTAgtaDetectionEvaluator,
     UAVDTDetectionEvaluator,
     UAVDTDotaDetectionEvaluator,
+    UAVDTGtaDetectionEvaluator,
     GTAV10KDetectionEvaluator,
 )
 
@@ -143,6 +144,8 @@ def get_evaluator(cfg, dataset_name, output_folder=None):
         return UAVDTDetectionEvaluator(dataset_name)
     if evaluator_type == "uavdtdota":
         return UAVDTDotaDetectionEvaluator(dataset_name)
+    if evaluator_type == "uavdtgta":
+        return UAVDTGtaDetectionEvaluator(dataset_name)
     if evaluator_type == "gtav10k":
         return GTAV10KDetectionEvaluator(dataset_name)
 
@@ -327,7 +330,7 @@ def train_sfda(cfg, model_student, model_teacher, args, resume=False):
             start_iter, max_iter_perepoch = 0, len_data_loader
             progress_bar = tqdm(zip(data_loader, range(start_iter, max_iter_perepoch)))
             for data, iteration in progress_bar:
-                storage.iter = iteration+epoch*max_iter_perepoch
+                storage.iter = iteration+(epoch-1)*max_iter_perepoch
                 with torch.no_grad():
                     _, teacher_features, teacher_proposals, teacher_results = model_teacher(data, mode="train", iteration=iteration)
                 teacher_pseudo_results, _ = process_pseudo_label(teacher_results, 0.7, "roih", "thresholding") # HPL with confidence thresholding 0.7
@@ -362,8 +365,8 @@ def train_sfda(cfg, model_student, model_teacher, args, resume=False):
                     
                 if (
                     cfg.TEST.EVAL_PERIOD > 0
-                    and (iteration + 1) % cfg.TEST.EVAL_PERIOD == 0
-                    and iteration < max_iter_perepoch - 1
+                    and ((storage.iter + 1) % cfg.TEST.EVAL_PERIOD == 0
+                    or storage.iter == max_sf_da_iter - 1)
                 ):
                     validation_sfda(cfg, model_student, model_teacher, storage, writers, iteration, epoch)
                     
@@ -375,7 +378,7 @@ def train_sfda(cfg, model_student, model_teacher, args, resume=False):
                 
                 periodic_checkpointer.step(iteration)
             
-            validation_sfda(cfg, model_student, model_teacher, storage, writers, iteration, epoch)
+            # validation_sfda(cfg, model_student, model_teacher, storage, writers, iteration, epoch)
 
 def setup(args):
     """

@@ -7,14 +7,14 @@ from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.structures import BoxMode
 from detectron2.utils.file_io import PathManager
 
-__all__ = ["load_uavdtdota_instances", "register_uavdtdota"]
+__all__ = ["load_uavdtgta_instances", "register_uavdtgta"]
 
 # CLASS_NAMES = ('car', 'truck', 'bus')
-CLASS_NAMES = ('small-vehicle', 'large-vehicle')
+CLASS_NAMES = ('car', 'background')
 # CLASS_NAMES = ('small-vehicle','large-vehicle','background')
-mapper = {'bus': 'large-vehicle', 'truck': 'large-vehicle', 'car': 'small-vehicle'}
+mapper = {'bus': 'car', 'truck': 'car', 'car': 'car'}
 
-def load_uavdtdota_instances(dirname: str, split: str, class_names: Union[List[str], Tuple[str, ...]]):
+def load_uavdtgta_instances(dirname: str, split: str, class_names: Union[List[str], Tuple[str, ...]]):
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:
         fileids = np.loadtxt(f, dtype=np.str)
 
@@ -55,8 +55,8 @@ def load_uavdtdota_instances(dirname: str, split: str, class_names: Union[List[s
         dicts.append(r)
     return dicts
 
-def register_uavdtdota(name, dirname, split, year, class_names=CLASS_NAMES):
-    DatasetCatalog.register(name, lambda: load_uavdtdota_instances(dirname, split, class_names))
+def register_uavdtgta(name, dirname, split, year, class_names=CLASS_NAMES):
+    DatasetCatalog.register(name, lambda: load_uavdtgta_instances(dirname, split, class_names))
     MetadataCatalog.get(name).set(
         thing_classes=list(class_names), dirname=dirname, year=year, split=split
     )

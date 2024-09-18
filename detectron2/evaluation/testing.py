@@ -19,11 +19,22 @@ def print_csv_format(results):
     logger = logging.getLogger(__name__)
     for task, res in results.items():
         if isinstance(res, Mapping):
-            # Don't print "AP-category" metrics since they are usually not tracked.
-            important_res = [(k, v) for k, v in res.items() if "-" not in k]
             logger.info("copypaste: Task: {}".format(task))
-            logger.info("copypaste: " + ",".join([k[0] for k in important_res]))
-            logger.info("copypaste: " + ",".join(["{0:.4f}".format(k[1]) for k in important_res]))
+            if "class-AP50" in res.keys():
+                important_res=[]
+                for k,v in res.items():
+                    if "class" in k:
+                        for clsid,cls_res in enumerate(v):
+                            important_res.append((f"{k}/{clsid}", cls_res))
+                    else:
+                        important_res.append((k,v))
+                logger.info("copypaste: " + ",".join([k[0] for k in important_res]))
+                logger.info("copypaste: " + ",".join(["{0:.4f}".format(k[1]) for k in important_res]))
+            else:
+                # Don't print "AP-category" metrics since they are usually not tracked.
+                important_res = [(k, v) for k, v in res.items() if "-" not in k]
+                logger.info("copypaste: " + ",".join([k[0] for k in important_res]))
+                logger.info("copypaste: " + ",".join(["{0:.4f}".format(k[1]) for k in important_res]))
         else:
             logger.info(f"copypaste: {task}={res}")
 

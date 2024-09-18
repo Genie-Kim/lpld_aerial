@@ -45,6 +45,7 @@ from .visdrone import register_visdrone
 from .visdronedota import register_visdronedota
 from .uavdt import register_uavdt
 from .uavdtdota import register_uavdtdota
+from .uavdtgta import register_uavdtgta
 from .gtav10k import register_gtav10k
 
 # ==== Predefined datasets and splits for COCO ==========
@@ -479,6 +480,23 @@ def register_all_uavdtdota(root):
         register_uavdtdota(name, os.path.join(root, dirname), split, year)
         MetadataCatalog.get(name).evaluator_type = "uavdtdota"
 
+def register_all_uavdtgta(root):
+    SPLITS = [
+        ("uavdtgta_train_daylight", "uavdt_voc", "train_daylight"),
+        ("uavdtgta_val_daylight", "uavdt_voc", "val_daylight"),
+        ("uavdtgta_test_daylight", "uavdt_voc", "test_daylight_all"),
+        ("uavdtgta_train_fog", "uavdt_voc", "train_fog"),
+        ("uavdtgta_val_fog", "uavdt_voc", "val_fog"),
+        ("uavdtgta_test_fog", "uavdt_voc", "test_fog_all"),
+        ("uavdtgta_train_night", "uavdt_voc", "train_night"),
+        ("uavdtgta_val_night", "uavdt_voc", "val_night"),
+        ("uavdtgta_test_night", "uavdt_voc", "test_night_all"),
+    ]
+    for name, dirname, split in SPLITS:
+        year = 2007 if "2007" in name else 2012
+        register_uavdtgta(name, os.path.join(root, dirname), split, year)
+        MetadataCatalog.get(name).evaluator_type = "uavdtgta"
+
 def register_all_gtav10k(root):
     SPLITS = [
         ("gtav10k_train", "gtav10k_voc", "train"),
@@ -523,4 +541,5 @@ if __name__.endswith(".builtin"):
     register_all_visdronedota(_root)
     register_all_uavdt(_root)
     register_all_uavdtdota(_root)
+    register_all_uavdtgta(_root)
     register_all_gtav10k(_root)

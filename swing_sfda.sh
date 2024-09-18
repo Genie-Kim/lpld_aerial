@@ -8,12 +8,14 @@ CONFIG_NAME="sfda_dota2uavdt"
 cp "$CONFIG_DIR/$CONFIG_NAME.yaml" "configs/sfda/exp/"
 
 # Define the configurations to update
-TMUXNAME="tm014"
-NEW_METHOD="LPLD"
-NEW_BASE_LR="0.001"
-NEW_EMAPERIOD="2000"
-NEW_KEEP_RATE="0.70"
-GPUNUM="2"
+NEW_METHOD="MTBASE"
+TMUXNAME="tm005"   NEW_BASE_LR="0.0002"   NEW_EMAPERIOD="1"   NEW_KEEP_RATE="0.9994"   GPUNUM="0"
+# TMUXNAME="tm017"
+# NEW_BASE_LR="0.0002"
+# NEW_EMAPERIOD="128"
+# NEW_KEEP_RATE="0.75"
+# GPUNUM="1"
+
 
 # split NEW_BASE_LR with '.' and get the last element
 IFS='.' read -r -a array <<< "$NEW_BASE_LR"
@@ -23,17 +25,11 @@ TEMP_BASE_LR="${array[1]}"
 IFS='.' read -r -a array <<< "$NEW_KEEP_RATE"
 TEMP_KEEP_RATE="${array[1]}"
 
-
-
-
 # make a array with the above new configuration and join them with "_"
 NEW_CONFIG_NAME=""$CONFIG_NAME"_"$NEW_METHOD"_"$TEMP_BASE_LR"_"$NEW_EMAPERIOD"_"$TEMP_KEEP_RATE""
 
-
 file="configs/sfda/exp/$NEW_CONFIG_NAME.yaml"
-
 mv "configs/sfda/exp/$CONFIG_NAME.yaml" "$file"
-
 # Loop through all YAML files in the directory
 echo "Updating $file..."
 
@@ -54,3 +50,30 @@ sleep 5
 tmux send-keys -t "$TMUXNAME" 'lpld' ENTER
 sleep 5
 tmux send-keys -t "$TMUXNAME" "CUDA_VISIBLE_DEVICES=$GPUNUM python tools/train_main.py --config-file $file --model-dir source_model/dota_source_v11/best_mAP.pth" ENTER
+
+
+
+
+
+
+# tmux kill-session -t "tm001"
+# tmux kill-session -t "tm002"
+# tmux kill-session -t "tm003"
+# tmux kill-session -t "tm004"
+# tmux kill-session -t "tm005"
+# tmux kill-session -t "tm006"
+# tmux kill-session -t "tm007"
+# tmux kill-session -t "tm008"
+# tmux kill-session -t "tm009"
+# tmux kill-session -t "tm010"
+# tmux kill-session -t "tm011"
+# tmux kill-session -t "tm012"
+# tmux kill-session -t "tm013"
+# tmux kill-session -t "tm014"
+# tmux kill-session -t "tm015"
+# tmux kill-session -t "tm016"
+# tmux kill-session -t "tm017"
+
+
+
+

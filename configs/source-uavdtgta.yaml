@@ -3,7 +3,7 @@ MODEL:
   WEIGHT: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
   MASK_ON: False
   ROI_HEADS:
-    NUM_CLASSES: 3
+    NUM_CLASSES: 2
   RESNETS:
     NORM: "FrozenBN" 
     OUT_FEATURES: ["res4"]
@@ -16,8 +16,8 @@ INPUT:
   MIN_SIZE_TRAIN: (800,)
   MIN_SIZE_TEST: 800
 DATASETS:
-  TRAIN: ("uavdtdota_train_daylight",)
-  TEST: ("uavdtdota_val_daylight",)
+  TRAIN: ("uavdtgta_train_daylight",)
+  TEST: ("uavdtgta_val_daylight",)
 SOLVER:
   BASE_LR: 0.0002
   STEPS: (50000,)
@@ -26,7 +26,7 @@ SOLVER:
   PATIENCE: 5
 TEST:
   EVAL_PERIOD: 2000
-OUTPUT_DIR: "checkpoint/uavdtdota_source_v15" # 14 add background classes --> 15 delete background class but num classes 3
+OUTPUT_DIR: "checkpoint/uavdtgta_source_v1"
 DATALOADER:
   NUM_WORKERS: 16
 SEED: 55405391

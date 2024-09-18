@@ -57,6 +57,7 @@ from detectron2.evaluation import (
     VisDroneDotaCBTDetectionEvaluator,
     UAVDTDetectionEvaluator,
     UAVDTDotaDetectionEvaluator,
+    UAVDTGtaDetectionEvaluator,
     GTAV10KDetectionEvaluator,
 )
 from detectron2.modeling import build_model
@@ -129,6 +130,8 @@ def get_evaluator(cfg, dataset_name, output_folder=None):
         return UAVDTDetectionEvaluator(dataset_name)
     if evaluator_type == "uavdtdota":
         return UAVDTDotaDetectionEvaluator(dataset_name)
+    if evaluator_type == "uavdtgta":
+        return UAVDTGtaDetectionEvaluator(dataset_name)
     if evaluator_type == "gtav10k":
         return GTAV10KDetectionEvaluator(dataset_name)
     

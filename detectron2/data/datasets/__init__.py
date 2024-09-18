@@ -21,6 +21,7 @@ from .visdrone import load_visdrone_instances, register_visdrone
 from .visdronedota import load_visdronedota_instances, register_visdronedota
 from .uavdt import load_uavdt_instances, register_uavdt
 from .uavdtdota import load_uavdtdota_instances, register_uavdtdota
+from .uavdtgta import load_uavdtgta_instances, register_uavdtgta
 from .gtav10k import load_gtav10k_instances, register_gtav10k
 
 __all__ = [k for k in globals().keys() if not k.startswith("_")]

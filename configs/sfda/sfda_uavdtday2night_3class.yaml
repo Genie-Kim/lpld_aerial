@@ -16,10 +16,10 @@ INPUT:
   MIN_SIZE_TRAIN: (800,)
   MIN_SIZE_TEST: 800
 DATASETS:
-  TRAIN: ("uavdtdota_train_night",)
-  TEST: ("uavdtdota_val_night",)
+  TRAIN: ("uavdt_train_night",)
+  TEST: ("uavdt_val_night",)
 SOLVER:
-  BASE_LR: 0.0002
+  BASE_LR: 0.0001
   WEIGHT_DECAY: 0.0001
   STEPS: () # not implemented
   IMS_PER_BATCH: 1
@@ -27,11 +27,11 @@ SOLVER:
 SOURCE_FREE:
   TYPE: True
   MODE: True
-  METHOD: "LPLD"
-  KEEP_RATE: 0.9
-  EMAPERIOD: 64
+  METHOD: "MTBASE"
+  KEEP_RATE: 0.999
+  EMAPERIOD: 1
 DATALOADER:
   NUM_WORKERS: 16
 TEST:
   EVAL_PERIOD: 2000
-OUTPUT_DIR: "./checkpoints_sfda/uavdtday2night"
+OUTPUT_DIR: "./checkpoints_sfda/uavdtday2night_3class_BN"
