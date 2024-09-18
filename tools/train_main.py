@@ -331,6 +331,9 @@ def train_sfda(cfg, model_student, model_teacher, args, resume=False):
             progress_bar = tqdm(zip(data_loader, range(start_iter, max_iter_perepoch)))
             for data, iteration in progress_bar:
                 storage.iter = iteration+(epoch-1)*max_iter_perepoch
+                if storage.iter-start_iter == 0:
+                    # evalutate the source model before training
+                    validation_sfda(cfg, model_student, model_teacher, storage, writers, iteration, epoch)
                 with torch.no_grad():
                     _, teacher_features, teacher_proposals, teacher_results = model_teacher(data, mode="train", iteration=iteration)
                 teacher_pseudo_results, _ = process_pseudo_label(teacher_results, 0.7, "roih", "thresholding") # HPL with confidence thresholding 0.7
