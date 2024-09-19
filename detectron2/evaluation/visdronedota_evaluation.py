@@ -110,8 +110,10 @@ class VisDroneDotaCBTDetectionEvaluator(DatasetEvaluator):
         return ret
 
 @lru_cache(maxsize=None)
-def parse_rec(filename,mapper=None):
+def parse_rec(filename,mapper_items=None):
     """Parse a PASCAL VOC xml file."""
+    # Reconstruct the mapper dictionary
+    mapper = dict(mapper_items) if mapper_items is not None else None
     with PathManager.open(filename) as f:
         tree = ET.parse(f)
     objects = []
@@ -174,6 +176,8 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
 
     # load annots
     recs = {}
+    mapper = tuple(sorted(mapper.items())) if mapper is not None else None
+    
     for imagename in imagenames:
         recs[imagename] = parse_rec(annopath.format(imagename),mapper)
 

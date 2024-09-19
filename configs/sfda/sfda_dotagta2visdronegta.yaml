@@ -3,7 +3,7 @@ MODEL:
   WEIGHT: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
   MASK_ON: False
   ROI_HEADS:
-    NUM_CLASSES: 3
+    NUM_CLASSES: 2
   RESNETS:
     NORM: "FrozenBN" 
     OUT_FEATURES: ["res4"]
@@ -16,8 +16,8 @@ INPUT:
   MIN_SIZE_TRAIN: (800,)
   MIN_SIZE_TEST: 800
 DATASETS:
-  TRAIN: ("uavdtdota_train_fog",)
-  TEST: ("uavdtdota_val_fog",)
+  TRAIN: ("visdronegta_train",)
+  TEST: ("visdronegta_val",)
 SOLVER:
   BASE_LR: 0.0002
   WEIGHT_DECAY: 0.0001
@@ -28,10 +28,10 @@ SOURCE_FREE:
   TYPE: True
   MODE: True
   METHOD: "LPLD"
-  KEEP_RATE: 0.9994
+  KEEP_RATE: 0.999
   EMAPERIOD: 1
 DATALOADER:
   NUM_WORKERS: 16
 TEST:
   EVAL_PERIOD: 2000
-OUTPUT_DIR: "./checkpoints_sfda/uavdtday2fog"
+OUTPUT_DIR: "./checkpoints_sfda/dotagta2visdronegta"

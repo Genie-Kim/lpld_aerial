@@ -311,9 +311,9 @@ def train_sfda(cfg, model_student, model_teacher, args, resume=False):
 
     data_loader = build_detection_train_loader(cfg)
 
-    total_epochs = 10
     len_data_loader = len(data_loader.dataset.dataset.dataset)
     start_iter, max_iter_perepoch = 0, len_data_loader
+    total_epochs = 10 if 10*max_iter_perepoch>100000 else 100000//max_iter_perepoch
     max_sf_da_iter = total_epochs*max_iter_perepoch
     logger.info("Starting training from iteration {}".format(start_iter))
     periodic_checkpointer = PeriodicCheckpointer(checkpointer, len_data_loader, max_iter=max_sf_da_iter)
@@ -393,7 +393,7 @@ def setup(args):
     
     folder_names= []
     folder_names.append(str(cfg.SOURCE_FREE.METHOD))
-    folder_names.append(str(cfg.SOLVER.BASE_LR).split('.')[1])
+    folder_names.append(format(cfg.SOLVER.BASE_LR, 'f').split('.')[1])
     folder_names.append(str(cfg.SOURCE_FREE.EMAPERIOD))
     folder_names.append(str(cfg.SOURCE_FREE.KEEP_RATE).split('.')[1])
     import datetime

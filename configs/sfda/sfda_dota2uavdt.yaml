@@ -19,7 +19,7 @@ DATASETS:
   TRAIN: ("uavdtdota_train_daylight",)
   TEST: ("uavdtdota_val_daylight",)
 SOLVER:
-  BASE_LR: 0.001
+  BASE_LR: 0.0002
   WEIGHT_DECAY: 0.0001
   STEPS: () # not implemented
   IMS_PER_BATCH: 1
@@ -28,8 +28,8 @@ SOURCE_FREE:
   TYPE: True
   MODE: True
   METHOD: "LPLD"
-  KEEP_RATE: 0.8
-  EMAPERIOD: 1000
+  KEEP_RATE: 0.999
+  EMAPERIOD: 1
 DATALOADER:
   NUM_WORKERS: 16
 TEST:
