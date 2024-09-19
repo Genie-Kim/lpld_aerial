@@ -11,7 +11,7 @@ __all__ = ["load_visdronedota_instances", "register_visdronedota"]
 
 # CLASS_NAMES = ('pedestrian', 'people', 'bicycle', 'car', 'van', 'truck', 'tricycle', 'awning-tricycle', 'bus', 'motor')
 CLASS_NAMES = ('small-vehicle','large-vehicle')
-mapper = {'bus': 'large-vehicle', "truck": 'large-vehicle', 'car': 'small-vehicle'}
+CLSMAPPER = {'bus': 'large-vehicle', "truck": 'large-vehicle', 'car': 'small-vehicle'}
 
 def load_visdronedota_instances(dirname: str, split: str, class_names: Union[List[str], Tuple[str, ...]]):
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:
@@ -43,8 +43,8 @@ def load_visdronedota_instances(dirname: str, split: str, class_names: Union[Lis
             bbox[0] -= 1.0
             bbox[1] -= 1.0
             
-            if cls in mapper:
-                cls = mapper[cls]
+            if cls in CLSMAPPER:
+                cls = CLSMAPPER[cls]
                 if cls in class_names:
                     instances.append(
                         {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
@@ -54,8 +54,8 @@ def load_visdronedota_instances(dirname: str, split: str, class_names: Union[Lis
         dicts.append(r)
     return dicts
 
-def register_visdronedota(name, dirname, split, year, class_names=CLASS_NAMES):
+def register_visdronedota(name, dirname, split, year, class_names=CLASS_NAMES, class_mapper=CLSMAPPER):
     DatasetCatalog.register(name, lambda: load_visdronedota_instances(dirname, split, class_names))
     MetadataCatalog.get(name).set(
-        thing_classes=list(class_names), dirname=dirname, year=year, split=split
+        thing_classes=list(class_names), dirname=dirname, year=year, split=split, class_mapper=class_mapper
     )

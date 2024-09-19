@@ -28,6 +28,7 @@ class GTAV10KDetectionEvaluator(DatasetEvaluator):
         self._anno_file_template = os.path.join(annotation_dir_local, "{}.xml")
         self._image_set_path = os.path.join(meta.dirname, "ImageSets", "Main", meta.split + ".txt")
         self._class_names = meta.thing_classes
+        self._class_mapper = meta.class_mapper
         assert meta.year in [2007, 2012], meta.year
         self._is_2007 = meta.year == 2007
         self._cpu_device = torch.device("cpu")
@@ -85,6 +86,7 @@ class GTAV10KDetectionEvaluator(DatasetEvaluator):
                     cls_name,
                     ovthresh=thresh / 100.0,
                     use_07_metric=self._is_2007,
+                    mapper=self._class_mapper
                 )
                 aps[thresh].append(ap * 100)
                 if "rec_small" in rec:
@@ -100,14 +102,14 @@ class GTAV10KDetectionEvaluator(DatasetEvaluator):
 
         ret["bbox"] = {"AP": np.mean(list(mAP.values())),
                        "AP50": mAP[50], "class-AP50": aps[50],
-                       "FNR_small" : 100-100*mReC["small"],
-                       "FNR_medium" : 100-100*mReC["medium"],
-                       "FNR_large" : 100-100*mReC["large"]}
+                       "FNR_small" : 100-100*mReC["small"] if "small" in mReC else 100,
+                       "FNR_medium" : 100-100*mReC["medium"] if "medium" in mReC else 100,
+                       "FNR_large" : 100-100*mReC["large"] if "large" in mReC else 100}
 
         return ret
 
 @lru_cache(maxsize=None)
-def parse_rec(filename):
+def parse_rec(filename,mapper=None):
     """Parse a PASCAL VOC xml file."""
     with PathManager.open(filename) as f:
         tree = ET.parse(f)

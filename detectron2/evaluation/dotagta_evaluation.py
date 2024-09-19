@@ -30,6 +30,7 @@ class DOTAgtaDetectionEvaluator(DatasetEvaluator):
         self._anno_file_template = os.path.join(annotation_dir_local, "{}.xml")
         self._image_set_path = os.path.join(meta.dirname, "ImageSets", "Main", meta.split + ".txt")
         self._class_names = meta.thing_classes
+        self._class_mapper = meta.class_mapper
         assert meta.year in [2007, 2012], meta.year
         self._is_2007 = meta.year == 2007
         self._cpu_device = torch.device("cpu")
@@ -87,6 +88,7 @@ class DOTAgtaDetectionEvaluator(DatasetEvaluator):
                     cls_name,
                     ovthresh=thresh / 100.0,
                     use_07_metric=self._is_2007,
+                    mapper=self._class_mapper
                 )
                 aps[thresh].append(ap * 100)
                 if "rec_small" in rec:
@@ -102,23 +104,22 @@ class DOTAgtaDetectionEvaluator(DatasetEvaluator):
 
         ret["bbox"] = {"AP": np.mean(list(mAP.values())),
                        "AP50": mAP[50], "class-AP50": aps[50],
-                       "FNR_small" : 100-100*mReC["small"],
-                       "FNR_medium" : 100-100*mReC["medium"],
-                       "FNR_large" : 100-100*mReC["large"]}
+                       "FNR_small" : 100-100*mReC["small"] if "small" in mReC else 100,
+                       "FNR_medium" : 100-100*mReC["medium"] if "medium" in mReC else 100,
+                       "FNR_large" : 100-100*mReC["large"] if "large" in mReC else 100}
 
         return ret
 
 @lru_cache(maxsize=None)
-def parse_rec(filename):
+def parse_rec(filename,mapper=None):
     """Parse a PASCAL VOC xml file."""
-    mapper = {'large-vehicle': 'car', 'small-vehicle': 'car'}
     with PathManager.open(filename) as f:
         tree = ET.parse(f)
     objects = []
     for obj in tree.findall("object"):
         obj_struct = {}
         obj_struct["name"] = obj.find("name").text
-        if obj_struct["name"] in mapper.keys():
+        if mapper is not None and obj_struct["name"] in mapper.keys():
             obj_struct["name"] = mapper[obj_struct["name"]]
         obj_struct["pose"] = obj.find("pose").text
         obj_struct["truncated"] = int(obj.find("truncated").text)
@@ -166,7 +167,7 @@ def voc_ap(rec, prec, use_07_metric=False):
         ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
     return ap
 
-def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_metric=False):
+def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_metric=False,mapper=None):
     with PathManager.open(imagesetfile, "r") as f:
         lines = f.readlines()
     imagenames = [x.strip() for x in lines]
@@ -174,7 +175,7 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     # load annots
     recs = {}
     for imagename in imagenames:
-        recs[imagename] = parse_rec(annopath.format(imagename))
+        recs[imagename] = parse_rec(annopath.format(imagename), mapper)
 
     # thresholds for categorizing object sizes (in terms of area)
     small_thresh = 32 * 32

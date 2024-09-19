@@ -12,7 +12,7 @@ __all__ = ["load_uavdtgta_instances", "register_uavdtgta"]
 # CLASS_NAMES = ('car', 'truck', 'bus')
 CLASS_NAMES = ('car', 'background')
 # CLASS_NAMES = ('small-vehicle','large-vehicle','background')
-mapper = {'bus': 'car', 'truck': 'car', 'car': 'car'}
+CLSMAPPER = {'bus': 'car', 'truck': 'car', 'car': 'car'}
 
 def load_uavdtgta_instances(dirname: str, split: str, class_names: Union[List[str], Tuple[str, ...]]):
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:
@@ -44,8 +44,8 @@ def load_uavdtgta_instances(dirname: str, split: str, class_names: Union[List[st
             bbox[0] -= 1.0
             bbox[1] -= 1.0
             
-            if cls in mapper:
-                cls = mapper[cls]
+            if cls in CLSMAPPER:
+                cls = CLSMAPPER[cls]
                 if cls in class_names:
                     instances.append(
                         {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
@@ -55,8 +55,8 @@ def load_uavdtgta_instances(dirname: str, split: str, class_names: Union[List[st
         dicts.append(r)
     return dicts
 
-def register_uavdtgta(name, dirname, split, year, class_names=CLASS_NAMES):
+def register_uavdtgta(name, dirname, split, year, class_names=CLASS_NAMES, class_mapper=CLSMAPPER):
     DatasetCatalog.register(name, lambda: load_uavdtgta_instances(dirname, split, class_names))
     MetadataCatalog.get(name).set(
-        thing_classes=list(class_names), dirname=dirname, year=year, split=split
+        thing_classes=list(class_names), dirname=dirname, year=year, split=split, class_mapper=class_mapper
     )
