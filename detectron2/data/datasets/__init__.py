@@ -19,6 +19,7 @@ from .dota import load_dota_instances, register_dota
 from .dotagta import load_dotagta_instances, register_dotagta
 from .visdrone import load_visdrone_instances, register_visdrone
 from .visdronedota import load_visdronedota_instances, register_visdronedota
+from .visdronegta import load_visdronegta_instances, register_visdronegta
 from .uavdt import load_uavdt_instances, register_uavdt
 from .uavdtdota import load_uavdtdota_instances, register_uavdtdota
 from .uavdtgta import load_uavdtgta_instances, register_uavdtgta

@@ -9,8 +9,7 @@ CONFIG_NAME="sfda_uavdtgtaday2night"
 cp "$CONFIG_DIR/$CONFIG_NAME.yaml" "configs/sfda/exp/"
 
 # Define the configurations to update
-NEW_METHOD="MTBASE"
-TMUXNAME="tm007"   NEW_BASE_LR="0.0002"   NEW_EMAPERIOD="1"   NEW_KEEP_RATE="0.9996"   GPUNUM="1"
+NEW_METHOD="MTBASE"   TMUXNAME="tm006"   NEW_BASE_LR="0.0002"   NEW_EMAPERIOD="1"   NEW_KEEP_RATE="0.9995"   GPUNUM="0"
 
 # split NEW_BASE_LR with '.' and get the last element
 IFS='.' read -r -a array <<< "$NEW_BASE_LR"

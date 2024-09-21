@@ -2,20 +2,14 @@
 
 # Define the directory containing the YAML files
 CONFIG_DIR="configs/sfda"
-CONFIG_NAME="sfda_dota2uavdt"
+CONFIG_NAME="sfda_dotagta2uavdtgta"
+# CONFIG_NAME="sfda_dotagta2visdronegta"
 
 # copy to the parent directory
 cp "$CONFIG_DIR/$CONFIG_NAME.yaml" "configs/sfda/exp/"
 
 # Define the configurations to update
-NEW_METHOD="MTBASE"
-TMUXNAME="tm005"   NEW_BASE_LR="0.0002"   NEW_EMAPERIOD="1"   NEW_KEEP_RATE="0.9994"   GPUNUM="0"
-# TMUXNAME="tm017"
-# NEW_BASE_LR="0.0002"
-# NEW_EMAPERIOD="128"
-# NEW_KEEP_RATE="0.75"
-# GPUNUM="1"
-
+NEW_METHOD="LPLD"   TMUXNAME="tm014"   NEW_BASE_LR="0.0002"   NEW_EMAPERIOD="1"   NEW_KEEP_RATE="0.9996"   GPUNUM="1"
 
 # split NEW_BASE_LR with '.' and get the last element
 IFS='.' read -r -a array <<< "$NEW_BASE_LR"
@@ -49,7 +43,7 @@ tmux send-keys -t "$TMUXNAME" 'zsh' ENTER
 sleep 5
 tmux send-keys -t "$TMUXNAME" 'lpld' ENTER
 sleep 5
-tmux send-keys -t "$TMUXNAME" "CUDA_VISIBLE_DEVICES=$GPUNUM python tools/train_main.py --config-file $file --model-dir source_model/dota_source_v11/best_mAP.pth" ENTER
+tmux send-keys -t "$TMUXNAME" "CUDA_VISIBLE_DEVICES=$GPUNUM python tools/train_main.py --config-file $file --model-dir source_model/dotagta_source_v1/model_27999.pth" ENTER
 
 
 

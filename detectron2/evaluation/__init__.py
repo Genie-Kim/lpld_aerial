@@ -23,6 +23,7 @@ from .dota_evaluation import DOTADetectionEvaluator
 from .dotagta_evaluation import DOTAgtaDetectionEvaluator
 from .visdrone_evaluation import VisDroneDetectionEvaluator
 from .visdronedota_evaluation import VisDroneDotaCBTDetectionEvaluator
+from .visdronegta_evaluation import VisDroneGtaDetectionEvaluator
 from .uavdt_evaluation import UAVDTDetectionEvaluator
 from .uavdtdota_evaluation import UAVDTDotaDetectionEvaluator
 from .uavdtgta_evaluation import UAVDTGtaDetectionEvaluator

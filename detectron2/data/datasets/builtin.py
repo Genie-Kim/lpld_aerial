@@ -43,6 +43,7 @@ from .dota import register_dota
 from .dotagta import register_dotagta
 from .visdrone import register_visdrone
 from .visdronedota import register_visdronedota
+from .visdronegta import register_visdronegta
 from .uavdt import register_uavdt
 from .uavdtdota import register_uavdtdota
 from .uavdtgta import register_uavdtgta
@@ -445,6 +446,17 @@ def register_all_visdronedota(root):
         year = 2007 if "2007" in name else 2012
         register_visdronedota(name, os.path.join(root, dirname), split, year)
         MetadataCatalog.get(name).evaluator_type = "visdronedota"
+
+
+def register_all_visdronegta(root):
+    SPLITS = [
+        ("visdronegta_train", "visdrone_voc", "train"),
+        ("visdronegta_val", "visdrone_voc", "val"),
+    ]
+    for name, dirname, split in SPLITS:
+        year = 2007 if "2007" in name else 2012
+        register_visdronegta(name, os.path.join(root, dirname), split, year)
+        MetadataCatalog.get(name).evaluator_type = "visdronegta"
         
 def register_all_uavdt(root):
     SPLITS = [
@@ -539,6 +551,7 @@ if __name__.endswith(".builtin"):
     register_all_dotagta(_root)
     register_all_visdrone(_root)
     register_all_visdronedota(_root)
+    register_all_visdronegta(_root)
     register_all_uavdt(_root)
     register_all_uavdtdota(_root)
     register_all_uavdtgta(_root)
